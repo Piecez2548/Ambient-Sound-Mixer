@@ -27,4 +27,4 @@ Mix ambient sounds pulled from YouTube (rain, thunder, cafe, waves, forest…), 
 
 In Google Cloud Console → Credentials, set:
 - API restrictions: YouTube Data API v3
-- Website restrictions: `http://localhost:5173/*` and `http://127.0.0.1:47821/*`
+- Website restrictions: `http://localhost:5173/*`, `http://127.0.0.1:47821/*` and `https://ambient-sound-mixer-lake.vercel.app/*`
