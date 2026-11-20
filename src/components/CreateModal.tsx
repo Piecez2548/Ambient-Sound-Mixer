@@ -2,7 +2,7 @@ import { useEffect, useState, type CSSProperties, type FormEvent } from 'react';
 import { Check, LoaderCircle, Search } from 'lucide-react';
 import { SOUNDS } from '../data/sounds';
 import { MOODS, type Mood } from '../data/templates';
-import { hasApiKey, type Duration } from '../lib/youtube';
+import type { Duration } from '../lib/youtube';
 import type { Mixer } from '../state/useMixer';
 import { Modal } from './Modal';
 import { YouTubeResults } from './YouTubeResults';
@@ -92,10 +92,6 @@ function YouTubeTab({ mixer, initialQuery }: { mixer: Mixer; initialQuery: strin
     search.run(query, duration);
   };
 
-  if (!hasApiKey) {
-    return <div className="notice">Set VITE_YOUTUBE_API_KEY in .env to search YouTube.</div>;
-  }
-
   return (
     <div className="yt-tab">
       <form className="yt-search" onSubmit={submit}>
@@ -120,7 +116,7 @@ function YouTubeTab({ mixer, initialQuery }: { mixer: Mixer; initialQuery: strin
         onPick={(v) => mixer.addCustomSound(v)}
       />
       {!search.loading && !search.error && search.results.length === 0 && (
-        <p className="hint">Each search uses about 1% of the free daily YouTube API quota; results are cached for a week.</p>
+        <p className="hint">Results are cached for a week, so repeat searches are instant.</p>
       )}
     </div>
   );

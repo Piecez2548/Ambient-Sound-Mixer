@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CirclePlay, KeyRound, ListFilter, Search } from 'lucide-react';
+import { CirclePlay, ListFilter, Search } from 'lucide-react';
 import { MOODS, type Mood } from '../data/templates';
 import { SOUNDS } from '../data/sounds';
-import { hasApiKey } from '../lib/youtube';
 import type { Mixer } from '../state/useMixer';
 import { TemplateCard } from './TemplateCard';
 
@@ -54,7 +53,7 @@ export function TemplatesPanel({ mixer, onCreate, onSearchYouTube }: Props) {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && visible.length === 0 && hasApiKey && query.trim() && onSearchYouTube(query.trim())}
+            onKeyDown={(e) => e.key === 'Enter' && visible.length === 0 && query.trim() && onSearchYouTube(query.trim())}
             placeholder="Search for Templates..."
             aria-label="Search templates"
           />
@@ -115,16 +114,6 @@ export function TemplatesPanel({ mixer, onCreate, onSearchYouTube }: Props) {
         </div>
       </div>
 
-      {!hasApiKey && (
-        <div className="notice">
-          <KeyRound size={16} />
-          <span>
-            No YouTube API key found. Copy <code>.env.example</code> to <code>.env</code>, set <code>VITE_YOUTUBE_API_KEY</code>, then restart the
-            app.
-          </span>
-        </div>
-      )}
-
       <div className="grid">
         {visible.map((t) => (
           <TemplateCard
@@ -142,7 +131,7 @@ export function TemplatesPanel({ mixer, onCreate, onSearchYouTube }: Props) {
       {visible.length === 0 && (
         <div className="empty">
           <p>No templates match.</p>
-          {hasApiKey && query.trim() && (
+          {query.trim() && (
             <button className="btn-outline" onClick={() => onSearchYouTube(query.trim())}>
               <CirclePlay size={16} /> Search YouTube for “{query.trim()}”
             </button>

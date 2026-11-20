@@ -2,14 +2,13 @@ import { useEffect, useState, type CSSProperties } from 'react';
 import { AudioLines, Pause, Play, Trash2 } from 'lucide-react';
 import type { SoundDef } from '../data/sounds';
 import type { Template } from '../data/templates';
-import { hasApiKey, searchVideos } from '../lib/youtube';
+import { searchVideos } from '../lib/youtube';
 import { Thumb } from './Thumb';
 
 function useCoverVideo(t: Template) {
   const [videoId, setVideoId] = useState<string | null>(t.imageVideoId ?? null);
   useEffect(() => {
     if (t.imageVideoId) return setVideoId(t.imageVideoId);
-    if (!hasApiKey) return;
     let alive = true;
     searchVideos(t.imageQuery, { duration: 'any', maxResults: 5, ttlDays: 30 })
       .then((list) => alive && list[0] && setVideoId(list[0].id))

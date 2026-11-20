@@ -25,6 +25,15 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [setPlaying]);
 
+  // Electron tray menu: Play/Pause item + keep its label in sync.
+  useEffect(() => {
+    const bridge = (window as any).ambient;
+    return bridge?.onTogglePlay?.(() => setPlaying((p) => !p));
+  }, [setPlaying]);
+  useEffect(() => {
+    (window as any).ambient?.setPlaying?.(playing && active.length > 0);
+  }, [playing, active.length]);
+
   // Media keys / OS media overlay.
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;

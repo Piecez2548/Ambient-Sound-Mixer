@@ -1,7 +1,7 @@
 // Electron shell. In dev it loads the Vite server; in production it serves dist/
 // over a local http server, because YouTube embeds refuse to play from file://
 // (no Referer -> error 153).
-const { app, BrowserWindow, shell } = require('electron');
+const { app, BrowserWindow, Menu, Tray, ipcMain, nativeImage, shell } = require('electron');
 const path = require('node:path');
 const http = require('node:http');
 const fs = require('node:fs');
@@ -58,6 +58,80 @@ function serveDist() {
 }
 
 let win = null;
+let tray = null;
+let isQuitting = false;
+let isPlaying = false;
+const startHidden = process.argv.includes('--hidden');
+const ICON = path.join(__dirname, '..', 'build', 'icon.png');
+
+// Tiny JSON settings file in userData (remembers we already showed the tray hint).
+const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
+function readSettings() {
+  try {
+    return JSON.parse(fs.readFileSync(settingsFile(), 'utf8'));
+  } catch {
+    return {};
+  }
+}
+function writeSettings(patch) {
+  try {
+    fs.writeFileSync(settingsFile(), JSON.stringify({ ...readSettings(), ...patch }));
+  } catch {
+    /* ignore */
+  }
+}
+
+function showWindow() {
+  if (!win) return;
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+}
+
+function isOpenAtLogin() {
+  return app.getLoginItemSettings({ args: ['--hidden'] }).openAtLogin;
+}
+
+function buildTrayMenu() {
+  if (!tray) return;
+  tray.setToolTip(isPlaying ? 'Ambient Sound Mixer — playing' : 'Ambient Sound Mixer');
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      { label: 'Open Ambient Sound Mixer', click: showWindow },
+      { label: isPlaying ? 'Pause' : 'Play', click: () => win?.webContents.send('toggle-play') },
+      { type: 'separator' },
+      {
+        label: 'Start with Windows',
+        type: 'checkbox',
+        checked: isOpenAtLogin(),
+        click: (item) => {
+          app.setLoginItemSettings({ openAtLogin: item.checked, args: ['--hidden'] });
+          buildTrayMenu();
+        },
+      },
+      { type: 'separator' },
+      {
+        label: 'Quit',
+        click: () => {
+          isQuitting = true;
+          app.quit();
+        },
+      },
+    ]),
+  );
+}
+
+function createTray() {
+  const image = nativeImage.createFromPath(ICON).resize({ width: 16, height: 16 });
+  tray = new Tray(image);
+  tray.on('click', showWindow);
+  buildTrayMenu();
+}
+
+ipcMain.on('playing-changed', (_event, playing) => {
+  isPlaying = Boolean(playing);
+  buildTrayMenu();
+});
 
 async function createWindow() {
   win = new BrowserWindow({
@@ -65,8 +139,10 @@ async function createWindow() {
     height: 800,
     minWidth: 900,
     minHeight: 600,
+    show: !startHidden,
     backgroundColor: '#0a0b10',
     title: 'Ambient Sound Mixer',
+    icon: ICON,
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: '#0a0b10', symbolColor: '#c4c6d4', height: 40 },
     webPreferences: {
@@ -84,18 +160,47 @@ async function createWindow() {
     return { action: 'deny' };
   });
 
+  // Closing the window hides it to the tray so the sounds keep playing.
+  win.on('close', (event) => {
+    if (isQuitting) return;
+    event.preventDefault();
+    win.hide();
+    if (!readSettings().trayHintShown && tray) {
+      tray.displayBalloon({
+        iconType: 'info',
+        title: 'Still playing in the tray',
+        content: 'Ambient Sound Mixer keeps running here. Right-click the tray icon to quit.',
+      });
+      writeSettings({ trayHintShown: true });
+    }
+  });
+
   const url = DEV_URL || (await serveDist());
   await win.loadURL(url);
+}
+
+function checkForUpdates() {
+  if (!app.isPackaged) return;
+  try {
+    const { autoUpdater } = require('electron-updater');
+    autoUpdater.checkForUpdatesAndNotify().catch(() => {});
+  } catch {
+    /* updater unavailable — skip */
+  }
 }
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
-    if (!win) return;
-    if (win.isMinimized()) win.restore();
-    win.focus();
+  app.on('second-instance', showWindow);
+  app.whenReady().then(async () => {
+    createTray();
+    await createWindow();
+    checkForUpdates();
   });
-  app.whenReady().then(createWindow);
-  app.on('window-all-closed', () => app.quit());
+  app.on('before-quit', () => {
+    isQuitting = true;
+  });
+  // Keep running in the tray when the window is closed.
+  app.on('window-all-closed', () => {});
 }

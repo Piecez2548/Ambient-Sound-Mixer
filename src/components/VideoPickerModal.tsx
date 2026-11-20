@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { ExternalLink, LoaderCircle, Search } from 'lucide-react';
-import { hasApiKey, watchUrl } from '../lib/youtube';
+import { watchUrl } from '../lib/youtube';
 import type { Mixer } from '../state/useMixer';
 import { Modal } from './Modal';
 import { YouTubeResults } from './YouTubeResults';
@@ -14,7 +14,7 @@ export function VideoPickerModal({ mixer, soundId, onClose }: { mixer: Mixer; so
   const search = useYouTubeSearch();
 
   useEffect(() => {
-    if (sound && !sound.video && hasApiKey) search.run(sound.query);
+    if (sound && !sound.video) search.run(sound.query);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [soundId]);
 
@@ -44,31 +44,25 @@ export function VideoPickerModal({ mixer, soundId, onClose }: { mixer: Mixer; so
       )}
       {channel?.status === 'error' && <div className="notice error">{channel.error}</div>}
 
-      {hasApiKey ? (
-        <>
-          <form className="yt-search" onSubmit={submit}>
-            <label className="search grow">
-              <Search size={16} />
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search a different video…" />
-            </label>
-            <button className="btn-primary" type="submit" disabled={search.loading || !query.trim()}>
-              {search.loading ? <LoaderCircle size={16} className="spin" /> : 'Search'}
-            </button>
-          </form>
-          {search.error && <div className="notice error">{search.error}</div>}
-          <YouTubeResults
-            results={search.results}
-            selectedId={current?.id}
-            actionLabel="Use"
-            onPick={(v) => {
-              mixer.chooseVideo(soundId, v);
-              onClose();
-            }}
-          />
-        </>
-      ) : (
-        <div className="notice">Set VITE_YOUTUBE_API_KEY in .env to search YouTube.</div>
-      )}
+      <form className="yt-search" onSubmit={submit}>
+        <label className="search grow">
+          <Search size={16} />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search a different video…" />
+        </label>
+        <button className="btn-primary" type="submit" disabled={search.loading || !query.trim()}>
+          {search.loading ? <LoaderCircle size={16} className="spin" /> : 'Search'}
+        </button>
+      </form>
+      {search.error && <div className="notice error">{search.error}</div>}
+      <YouTubeResults
+        results={search.results}
+        selectedId={current?.id}
+        actionLabel="Use"
+        onPick={(v) => {
+          mixer.chooseVideo(soundId, v);
+          onClose();
+        }}
+      />
     </Modal>
   );
 }
