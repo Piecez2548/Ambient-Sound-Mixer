@@ -58,6 +58,7 @@ function serveDist() {
 }
 
 let win = null;
+let appUrl = null;
 let tray = null;
 let isQuitting = false;
 let isPlaying = false;
@@ -82,7 +83,11 @@ function writeSettings(patch) {
 }
 
 function showWindow() {
-  if (!win) return;
+  // The window can be gone (e.g. the page closed itself) — make a new one.
+  if (!win || win.isDestroyed()) {
+    createWindow();
+    return;
+  }
   if (win.isMinimized()) win.restore();
   win.show();
   win.focus();
@@ -98,7 +103,13 @@ function buildTrayMenu() {
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: 'Open Ambient Sound Mixer', click: showWindow },
-      { label: isPlaying ? 'Pause' : 'Play', click: () => win?.webContents.send('toggle-play') },
+      {
+        label: isPlaying ? 'Pause' : 'Play',
+        click: () => {
+          if (win && !win.isDestroyed()) win.webContents.send('toggle-play');
+          else showWindow();
+        },
+      },
       { type: 'separator' },
       {
         label: 'Start with Windows',
@@ -139,7 +150,7 @@ async function createWindow() {
     height: 800,
     minWidth: 900,
     minHeight: 600,
-    show: !startHidden,
+    show: !(startHidden && appUrl === null),
     backgroundColor: '#0a0b10',
     title: 'Ambient Sound Mixer',
     icon: ICON,
@@ -175,8 +186,14 @@ async function createWindow() {
     }
   });
 
-  const url = DEV_URL || (await serveDist());
-  await win.loadURL(url);
+  win.on('closed', () => {
+    win = null;
+  });
+
+  // Start the local server once; a recreated window must reuse the same origin
+  // (localStorage and the search API's allowed origins depend on it).
+  appUrl ??= DEV_URL || (await serveDist());
+  await win.loadURL(appUrl);
 }
 
 function checkForUpdates() {
