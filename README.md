@@ -2,6 +2,8 @@
 
 Mix ambient sounds pulled from YouTube (rain, thunder, cafe, waves, forest…), set a volume for each sound plus a master volume, and set a sleep timer (it fades out over the last 30 seconds). Runs on the web and in Electron.
 
+**Live:** https://ambient-sound-mixer-lake.vercel.app (auto-deploys from `main` on Vercel; `VITE_YOUTUBE_API_KEY` is set in the Vercel project's Environment Variables)
+
 ## Setup
 
 1. `copy .env.example .env` and put your key in `VITE_YOUTUBE_API_KEY=`
