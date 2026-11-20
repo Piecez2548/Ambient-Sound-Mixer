@@ -68,9 +68,10 @@ export async function GET(request: Request) {
 
   if (!res.ok) {
     const reason: string | undefined = body?.error?.errors?.[0]?.reason;
+    const dailyLimit = reason === 'quotaExceeded' || /per day/i.test(body?.error?.message ?? '');
     const message =
-      reason === 'quotaExceeded'
-        ? 'YouTube API quota used up — try again tomorrow'
+      dailyLimit
+        ? 'YouTube search limit reached for today — try again tomorrow'
         : (body?.error?.message as string | undefined) ?? `YouTube API error ${res.status}`;
     // Cache quota errors briefly so a burst of visitors doesn't hammer the API.
     return json({ error: message, reason }, res.status, { 'Cache-Control': 'public, s-maxage=300' });

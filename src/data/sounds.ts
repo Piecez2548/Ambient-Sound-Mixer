@@ -29,7 +29,32 @@ export interface SoundDef {
   color: string;
   /** Set for sounds the user added straight from a YouTube search. */
   video?: VideoResult;
+  /** Built-in pick so the sound plays without spending search quota. */
+  defaultVideo?: VideoResult;
 }
+
+const yt = (id: string, title: string, channel: string): VideoResult => ({
+  id,
+  title,
+  channel,
+  thumbnail: `https://i.ytimg.com/vi/${id}/mqdefault.jpg`,
+});
+
+// Picked from real search results (2026-11-20). If one stops embedding, the
+// app falls back to searching with the sound's query.
+const DEFAULT_VIDEOS: Record<string, VideoResult> = {
+  rain: yt('vVUbF6ZRi_U', '"Rain Sounds" with No Music 10hrs "Sleep Sounds" ASMR', 'TexasHighDef'),
+  thunder: yt('ekXFslHOvZ8', '10 Hours Rain & Thunder | Rainstorm Sounds for Sleep, Studying or Relaxation', 'Relaxing White Noise'),
+  cafe: yt('qU8o3_T5y5M', 'ASMR Coffee Shop Sound | NO MUSIC | Coffee Shop Ambience for Study and Better Focus', 'Ambience For You'),
+  wind: yt('Y72WPpPc_Lw', 'HOWLING WIND Sounds for Sleeping 2 | Relax | Study | BLACK SCREEN', 'Outdoor Therapy'),
+  campfire: yt('UgHKb_7884o', '12 HOURS of Relaxing Fireplace Sounds - Crackling Fire Sounds (NO MUSIC)', 'Cat Trumpet'),
+  fireplace: yt('ZiG_HADnqQk', 'Late Night Fireplace 4K - Cozy Burning Wood & Crackling Fire Sounds (No Music)', 'Royal Fireplace 4K'),
+  train: yt('igqh1jLMe64', 'Rural Summer Train Ride in Hiroshima / 8K 60fps HDR / Natural Ambience (No Music)', 'Abao Ambience'),
+  waves: yt('vPhg6sc1Mk4', 'The Most Relaxing Waves Ever - Ocean Sounds to Sleep, Study and Chill', 'Naturaleza Viva'),
+  forest: yt('29XymHesxa0', 'Forest River Nature Sounds - Gentle Stream with Birdsong', 'Naturescapes'),
+  birds: yt('OyYZlLTGYoQ', 'Morning Bird Sounds | Real Bird Chirping for Relaxation, Meditation, Focus & Deep Sleep', "Nature's symphony"),
+  stream: yt('1wn-OSiNVjE', 'Forest Stream Sounds, Gentle Bird Song, Relaxing Nature Sounds', 'Streaming Birds'),
+};
 
 export interface CustomSound {
   id: string;
@@ -55,7 +80,7 @@ export const SOUNDS: SoundDef[] = [
   { id: 'city', name: 'City', category: 'Urban', query: 'city street ambience sounds no music', icon: Building2, color: '#94a3b8' },
   { id: 'white-noise', name: 'White Noise', category: 'Noise', query: 'white noise 10 hours', icon: AudioWaveform, color: '#f1f5f9' },
   { id: 'brown-noise', name: 'Brown Noise', category: 'Noise', query: 'brown noise 10 hours', icon: AudioWaveform, color: '#d6a77a' },
-];
+].map((s) => ({ ...s, defaultVideo: DEFAULT_VIDEOS[s.id] }));
 
 export function customToDef(c: CustomSound): SoundDef {
   return { id: c.id, name: c.name, category: 'YouTube', query: c.video.title, icon: Music, color: '#f87171', video: c.video };

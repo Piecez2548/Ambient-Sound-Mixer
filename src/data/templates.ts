@@ -32,6 +32,7 @@ export const TEMPLATES: Template[] = [
       { id: 'wind', volume: 20 },
     ],
     imageQuery: 'rainy night library ambience',
+    imageVideoId: 'CHFif_y2TyM',
   },
   {
     id: 'autumn-library-evening',
@@ -45,6 +46,7 @@ export const TEMPLATES: Template[] = [
       { id: 'rain', volume: 20 },
     ],
     imageQuery: 'autumn library evening ambience',
+    imageVideoId: 'XMkQFpiHUPY',
   },
   {
     id: 'rainy-day-focus',
@@ -58,6 +60,7 @@ export const TEMPLATES: Template[] = [
       { id: 'typing', volume: 20 },
     ],
     imageQuery: 'rainy day window study ambience',
+    imageVideoId: '6bPN0JyGfA4',
   },
   {
     id: 'cozy-campfire',
@@ -71,6 +74,7 @@ export const TEMPLATES: Template[] = [
       { id: 'forest', volume: 20 },
     ],
     imageQuery: 'cozy campfire night forest ambience',
+    imageVideoId: 'E77jmtut1Zc',
   },
   {
     id: 'cafe-chill',
@@ -83,6 +87,7 @@ export const TEMPLATES: Template[] = [
       { id: 'city', volume: 15 },
     ],
     imageQuery: 'cozy cafe ambience evening',
+    imageVideoId: 'wFW2_nzAFv8',
   },
   {
     id: 'midnight-train-ride',
@@ -95,6 +100,7 @@ export const TEMPLATES: Template[] = [
       { id: 'thunder', volume: 15 },
     ],
     imageQuery: 'night train ride rain ambience',
+    imageVideoId: 'oTqlVuGk8Yc',
   },
   {
     id: 'ocean-meditation',
@@ -107,6 +113,7 @@ export const TEMPLATES: Template[] = [
       { id: 'birds', volume: 10 },
     ],
     imageQuery: 'calm ocean beach waves ambience',
+    imageVideoId: 'vPhg6sc1Mk4',
   },
   {
     id: 'forest-morning',
@@ -119,5 +126,6 @@ export const TEMPLATES: Template[] = [
       { id: 'stream', volume: 40 },
     ],
     imageQuery: 'forest morning stream birds ambience',
+    imageVideoId: '29XymHesxa0',
   },
 ];

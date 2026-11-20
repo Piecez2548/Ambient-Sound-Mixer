@@ -51,6 +51,13 @@ export function useMixer() {
         continue;
       }
 
+      // Built-in pick first; only search if it has failed to play.
+      const preset = sound.defaultVideo;
+      if (preset && !bad?.has(preset.id)) {
+        setVideos((v) => ({ ...v, [entry.id]: preset }));
+        continue;
+      }
+
       resolving.current.add(entry.id);
       setChannel(entry.id, { status: 'searching' });
       searchVideos(sound.query)
