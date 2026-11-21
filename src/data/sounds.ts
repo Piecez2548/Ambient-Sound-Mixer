@@ -54,6 +54,13 @@ const DEFAULT_VIDEOS: Record<string, VideoResult> = {
   forest: yt('29XymHesxa0', 'Forest River Nature Sounds - Gentle Stream with Birdsong', 'Naturescapes'),
   birds: yt('OyYZlLTGYoQ', 'Morning Bird Sounds | Real Bird Chirping for Relaxation, Meditation, Focus & Deep Sleep', "Nature's symphony"),
   stream: yt('1wn-OSiNVjE', 'Forest Stream Sounds, Gentle Bird Song, Relaxing Nature Sounds', 'Streaming Birds'),
+  // Added 2026-11-21.
+  library: yt('camuymDbXhY', 'Library Sounds | 10 Hours of Quiet Page Turns for Study & Sleep', 'Hushloop'),
+  night: yt('7GoXVDH656g', 'Night Time Summer Nature Sounds, Cricket Conversations For Sleeping 12 Hours', 'Jason Stephenson - Guided Sleep Meditation'),
+  typing: yt('rRhXkyEW82g', '1 HOUR STUDY WITH ME ☁️ Typing Keyboard Sounds ASMR - No Music [Study Ambience] - No breaks', 'Kittys Desk'),
+  city: yt('ebAKJA3nSFw', 'City Sounds - 10 HOURS | for Relaxing Sleep, Meditation, Yoga or Study - City Ambience', 'Pure Relaxing Vibes'),
+  'white-noise': yt('nMfPqeZjc2c', 'White Noise Black Screen | Sleep, Study, Focus | 10 Hours', 'Relaxing White Noise'),
+  'brown-noise': yt('GrwTSN2Saak', 'Deep Layered Brown Noise ( 10 Hours )', 'crysknife007'),
 };
 
 export interface CustomSound {
