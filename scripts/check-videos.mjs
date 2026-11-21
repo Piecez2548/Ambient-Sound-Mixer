@@ -72,9 +72,13 @@ async function playability(id) {
     });
     if (!res.ok) return null;
     const html = await res.text();
-    const status = /"playabilityStatus":\{"status":"([A-Z_]+)"/.exec(html)?.[1];
+    const m = /"playabilityStatus":\{"status":"([A-Z_]+)"(?:,"reason":"([^"]*)")?/.exec(html);
     const embed = /"playableInEmbed":(true|false)/.exec(html)?.[1];
-    if (!status) return null;
+    if (!m) return null;
+    let status = m[1];
+    // Datacenter IPs (GitHub Actions) get "Sign in to confirm you're not a bot",
+    // which is also LOGIN_REQUIRED. Only an age gate makes the video itself bad.
+    if (status === 'LOGIN_REQUIRED' && !/age|inappropriate/i.test(m[2] ?? '')) return null;
     return { status, embeddable: embed !== 'false' };
   } catch {
     return null;
@@ -112,16 +116,31 @@ if (soundCount < 10 || coverCount < 4) {
 
 const results = [];
 for (const item of items) {
-  let { status, title } = await probe(item.id);
-  let v = verdict(item.kind, status);
-  if (v === 'ok' && item.kind === 'sound') {
-    const p = await playability(item.id);
-    if (p && PLAYER_PROBLEMS[p.status]) (status = PLAYER_PROBLEMS[p.status]), (v = 'broken');
-    else if (p && !p.embeddable) (status = 401), (v = 'broken');
-  }
-  results.push({ ...item, status, verdict: v, liveTitle: title });
+  const { status, title } = await probe(item.id);
+  results.push({ ...item, status, verdict: verdict(item.kind, status), liveTitle: title });
   await sleep(150);
 }
+
+// Second opinion from the player for sound videos that passed oEmbed.
+const playerChecked = [];
+for (const r of results.filter((x) => x.kind === 'sound' && x.verdict === 'ok')) {
+  const p = await playability(r.id);
+  const problem = p && (PLAYER_PROBLEMS[p.status] ?? (p.embeddable ? null : reason(401)));
+  playerChecked.push({ r, p, problem });
+  await sleep(150);
+}
+const flagged = playerChecked.filter((x) => x.problem);
+// Real breakage hits one or two videos; most of them at once means YouTube is
+// walling this network, not that the videos changed — ignore the player check then.
+let playerNote = '';
+if (flagged.length > Math.max(2, playerChecked.length / 2)) {
+  playerNote = `Player check skipped: YouTube refused it for ${flagged.length}/${playerChecked.length} videos from this network (bot check), so only oEmbed results count.`;
+  console.log(playerNote);
+} else {
+  for (const { r, problem } of flagged) (r.status = problem), (r.verdict = 'broken');
+}
+const playerOk = playerChecked.filter((x) => x.p).length;
+console.log(`Player check answered for ${playerOk}/${playerChecked.length} sound videos.`);
 
 const broken = results.filter((r) => r.verdict === 'broken');
 const unknown = results.filter((r) => r.verdict === 'unknown');
@@ -143,6 +162,7 @@ if (report) {
   } else {
     lines.push('All built-in videos are working.');
   }
+  if (playerNote) lines.push('', `_${playerNote}_`);
   if (unknown.length) lines.push('', `Couldn't check ${unknown.length} (YouTube didn't answer): ${unknown.map((r) => `${r.name} ${link(r.id)}`).join(', ')}`);
   lines.push('', `_Checked ${soundCount} sound videos and ${coverCount} template covers on ${new Date().toISOString().slice(0, 10)}._`);
   writeFileSync(report, lines.join('\n') + '\n');
