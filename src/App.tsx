@@ -7,9 +7,12 @@ import { VideoPickerModal } from './components/VideoPickerModal';
 import { YouTubeChannel } from './components/YouTubeChannel';
 import { RoutinesModal, formatClock, type RoutinesTab } from './components/RoutinesModal';
 import { useI18n } from './i18n';
+import { SyncLinkPrompt, SyncModal } from './components/SyncModal';
 import { readSharedMix } from './lib/share';
+import { readSyncLink } from './lib/sync';
 import { useMixer } from './state/useMixer';
 import { useRoutines } from './state/useRoutines';
+import { useSync } from './state/useSync';
 
 export default function App() {
   const mixer = useMixer();
@@ -18,6 +21,9 @@ export default function App() {
   const [pickFor, setPickFor] = useState<string | null>(null);
   const { playing, setPlaying, active, loadShared } = mixer;
   const [toast, setToast] = useState<string | null>(null);
+  const sync = useSync();
+  const [syncOpen, setSyncOpen] = useState(false);
+  const [syncLinkCode, setSyncLinkCode] = useState<string | null>(null);
   const routines = useRoutines(mixer, t);
   const [routinesTab, setRoutinesTab] = useState<RoutinesTab | null>(null);
   const focusLabel =
@@ -28,6 +34,13 @@ export default function App() {
   // Opened from a shared link (#mix=…): load that mix, then tidy the URL.
   useEffect(() => {
     const open = () => {
+      // #sync=CODE from another device's QR code or link: ask before connecting.
+      const linkCode = readSyncLink();
+      if (linkCode) {
+        if (linkCode !== sync.meta?.code) setSyncLinkCode(linkCode);
+        history.replaceState(null, '', location.pathname + location.search);
+        return;
+      }
       const shared = readSharedMix();
       if (!shared) return;
       if (loadShared(shared)) setToast(t('toast.sharedLoaded', { n: shared.sounds.length }));
@@ -76,7 +89,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <TitleBar playing={playing} count={active.length} extra={focusLabel} />
+      <TitleBar playing={playing} count={active.length} extra={focusLabel} sync={sync} onOpenSync={() => setSyncOpen(true)} />
       <main className="layout">
         <MixerPanel
           mixer={mixer}
@@ -121,6 +134,10 @@ export default function App() {
         </div>
       )}
 
+      {syncOpen && <SyncModal sync={sync} onClose={() => setSyncOpen(false)} onNotify={setToast} />}
+      {syncLinkCode && (
+        <SyncLinkPrompt code={syncLinkCode} sync={sync} onDone={() => setSyncLinkCode(null)} onNotify={setToast} />
+      )}
       {routinesTab && (
         <RoutinesModal mixer={mixer} routines={routines} initialTab={routinesTab} onClose={() => setRoutinesTab(null)} />
       )}

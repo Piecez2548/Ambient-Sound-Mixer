@@ -1,10 +1,26 @@
-import { AudioLines } from 'lucide-react';
+import { AudioLines, Cloud, CloudAlert, CloudCheck, RefreshCw } from 'lucide-react';
 import { LANGS, useI18n } from '../i18n';
+import type { Sync } from '../state/useSync';
+import { syncErrorKey } from './SyncModal';
 
 const isElectron = Boolean((window as any).ambient?.isElectron);
 
-export function TitleBar({ playing, count, extra }: { playing: boolean; count: number; extra?: string | null }) {
+interface Props {
+  playing: boolean;
+  count: number;
+  extra?: string | null;
+  sync: Sync;
+  onOpenSync: () => void;
+}
+
+export function TitleBar({ playing, count, extra, sync, onOpenSync }: Props) {
   const { t, lang, setLang } = useI18n();
+  const SyncIcon =
+    sync.status === 'syncing' ? RefreshCw : sync.status === 'error' ? CloudAlert : sync.status === 'ok' ? CloudCheck : Cloud;
+  const errKey = syncErrorKey(sync.error);
+  const syncTitle =
+    sync.status === 'error' && errKey ? t(errKey) : sync.status === 'syncing' ? t('sync.syncing') : t('sync.title');
+
   return (
     <div className={`titlebar ${isElectron ? 'is-electron' : ''}`}>
       <div className="brand">
@@ -19,6 +35,10 @@ export function TitleBar({ playing, count, extra }: { playing: boolean; count: n
         <span className="status-text">
           {playing && count > 0 ? t('status.playing', { n: count, s: count > 1 ? 's' : '' }) : t('status.paused')}
         </span>
+        <button className={`sync-btn ${sync.status}`} onClick={onOpenSync} title={syncTitle} aria-label={t('sync.title')}>
+          <SyncIcon size={14} className={sync.status === 'syncing' ? 'spin' : ''} />
+          <span>{t('sync.button')}</span>
+        </button>
         <div className="lang-switch" role="group" aria-label={t('lang.switch')}>
           {LANGS.map((l) => (
             <button key={l} className={lang === l ? 'active' : ''} onClick={() => setLang(l)} aria-pressed={lang === l} lang={l}>

@@ -29,6 +29,7 @@ You don't need an API key locally: the app calls the search API on the productio
 - **Wake-up alarm**: plays a chosen mix at a set time, fading in from silence over N minutes, once or every day. It needs the page (or the Windows app) running and the device awake. It still rings up to 30 minutes late if the device was asleep or the tab was throttled.
 - **Natural variation** (✨ chip): each sound's volume drifts gently below its set level along two slow sine waves (periods of 11–80 s, seeded by the sound id). Thunder and wind swing the most. The slider's bright part shows the live level.
 - **Thai / English**: everything is translated (`src/i18n.tsx`), including sound and template names and the Windows tray menu and close dialog. Thai is the default when the browser language is Thai or the timezone is Asia/Bangkok, English otherwise. Switch with ไทย / EN in the title bar; the choice is remembered.
+- **Cloud sync** (cloud button in the title bar): no accounts. One device turns sync on and gets a 20-character sync code (about 100 bits); other devices enter it, or scan the QR code or open the link (`#sync=…`, which asks before connecting). The code never leaves the devices. From it the browser derives an id (SHA-256) and an AES-GCM key, so `api/sync.ts` only stores ciphertext under a hash, in Upstash Redis. Each setting carries its last-change time and the newer one wins; when a device joins, personal templates and YouTube sounds are combined. Writes are compare-and-set on a revision number, so two devices can't overwrite each other. Syncs the current mix and volumes, templates, YouTube sounds, chosen videos, focus/alarm settings, natural variation and language. Play/pause stays per device. Pushes 1.5 s after a change and checks every 45 s while visible and on focus. Joining an unknown code is refused rather than creating a new space. If one device deletes the cloud copy, the others notice and stop syncing.
 - **Now playing**: each sound row shows the channel and video it's playing; click it to open the video on YouTube.
 - **Installable (PWA)**: `public/manifest.webmanifest` + `public/sw.js` (network-first app-shell cache; never caches `/api/`). On a phone: browser menu → *Add to Home screen* / *Install app*. The service worker isn't registered in Electron or the dev server.
 - **`api/search.ts`** is a Vercel Function that holds the YouTube Data API key (`YOUTUBE_API_KEY` in the Vercel project's Environment Variables, as a Secret. Vercel won't store `VITE_`-prefixed names as secrets). Vercel's CDN caches each query for 7 days, so all visitors share one result and the free quota (10,000 units/day, 100 per search) goes much further. Requests from websites other than this app are refused.
@@ -56,6 +57,10 @@ The **Check built-in videos** GitHub workflow runs it every Monday at 02:00 UTC,
 1. Bump `version` in `package.json`.
 2. Run `npm run dist`.
 3. Create a GitHub release tagged `v<version>` and upload the `.exe`, `.exe.blockmap` and `latest.yml` files from `release/`. Installed apps pick it up on their next launch.
+
+## Cloud sync storage
+
+Vercel project → **Storage** → **Create Database** → **Upstash for Redis** (free plan) → connect it to this project. That adds `KV_REST_API_URL` / `KV_REST_API_TOKEN`, which `api/sync.ts` reads (`UPSTASH_REDIS_REST_URL` / `_TOKEN` also work). Redeploy afterwards. Without them the sync endpoint answers 503 and the app says cloud sync isn't set up.
 
 ## API key restrictions
 
