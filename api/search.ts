@@ -18,6 +18,54 @@ function json(body: unknown, status: number, extra: Record<string, string> = {})
   });
 }
 
+// Persistent result cache in Upstash Redis (the same store cloud sync uses).
+// Vercel's CDN cache is wiped on every deploy; this one isn't, so a query that
+// was ever answered costs no quota again for 30 days — and still works when the
+// day's quota is used up. Every Redis problem is ignored: we just ask YouTube.
+const CACHE_TTL_SECONDS = 30 * 24 * 3600;
+
+function redisConfig() {
+  const url = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN;
+  return url && token ? { url, token } : null;
+}
+
+async function redis(command: (string | number)[]) {
+  const cfg = redisConfig();
+  if (!cfg) return null;
+  const res = await fetch(cfg.url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${cfg.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(command),
+    signal: AbortSignal.timeout(2500),
+  });
+  const body: any = await res.json().catch(() => null);
+  if (!res.ok || body?.error) throw new Error('redis');
+  return body.result;
+}
+
+const cacheKey = (q: string, duration: string, max: number) => `asm:search:v1:${duration}:${max}:${q.toLowerCase()}`;
+
+async function cacheGet(key: string): Promise<unknown[] | null> {
+  try {
+    const raw = (await redis(['GET', key])) as string | null;
+    const items = raw ? JSON.parse(raw) : null;
+    return Array.isArray(items) ? items : null;
+  } catch {
+    return null;
+  }
+}
+
+async function cachePut(key: string, items: unknown[]) {
+  try {
+    await redis(['SET', key, JSON.stringify(items), 'EX', CACHE_TTL_SECONDS]);
+  } catch {
+    /* cache is best-effort */
+  }
+}
+
+const SUCCESS_CACHE = { 'Cache-Control': 'public, s-maxage=604800, stale-while-revalidate=86400' };
+
 function decode(s: string) {
   return s
     .replace(/&amp;/g, '&')
@@ -47,6 +95,11 @@ export async function GET(request: Request) {
   const max = Math.min(Math.max(Number(url.searchParams.get('max')) || 12, 1), 15);
   if (!q) return json({ error: 'Missing q' }, 400);
   if (!DURATIONS.has(duration)) return json({ error: 'Bad duration' }, 400);
+
+  // Answered before (by anyone, at any deploy)? Serve it without touching YouTube.
+  const ck = cacheKey(q, duration, max);
+  const cached = await cacheGet(ck);
+  if (cached) return json({ items: cached }, 200, { ...SUCCESS_CACHE, 'X-Search-Cache': 'redis' });
 
   const params = new URLSearchParams({
     part: 'snippet',
@@ -86,7 +139,7 @@ export async function GET(request: Request) {
       thumbnail: it.snippet.thumbnails?.medium?.url ?? `https://i.ytimg.com/vi/${it.id.videoId}/mqdefault.jpg`,
     }));
 
-  return json({ items }, 200, {
-    'Cache-Control': 'public, s-maxage=604800, stale-while-revalidate=86400',
-  });
+  // Don't remember empty answers: a later search might find something.
+  if (items.length) await cachePut(ck, items);
+  return json({ items }, 200, { ...SUCCESS_CACHE, 'X-Search-Cache': 'miss' });
 }
