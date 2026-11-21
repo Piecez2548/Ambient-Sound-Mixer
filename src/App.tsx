@@ -5,13 +5,34 @@ import { TemplatesPanel } from './components/TemplatesPanel';
 import { TitleBar } from './components/TitleBar';
 import { VideoPickerModal } from './components/VideoPickerModal';
 import { YouTubeChannel } from './components/YouTubeChannel';
+import { readSharedMix } from './lib/share';
 import { useMixer } from './state/useMixer';
 
 export default function App() {
   const mixer = useMixer();
   const [create, setCreate] = useState<{ tab: CreateTab; query?: string } | null>(null);
   const [pickFor, setPickFor] = useState<string | null>(null);
-  const { playing, setPlaying, active } = mixer;
+  const { playing, setPlaying, active, loadShared } = mixer;
+  const [toast, setToast] = useState<string | null>(null);
+
+  // Opened from a shared link (#mix=…): load that mix, then tidy the URL.
+  useEffect(() => {
+    const open = () => {
+      const shared = readSharedMix();
+      if (!shared) return;
+      if (loadShared(shared)) setToast(`Shared mix loaded (${shared.sounds.length} sounds) — press play`);
+      history.replaceState(null, '', location.pathname + location.search);
+    };
+    open();
+    window.addEventListener('hashchange', open);
+    return () => window.removeEventListener('hashchange', open);
+  }, [loadShared]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = window.setTimeout(() => setToast(null), 4000);
+    return () => window.clearTimeout(t);
+  }, [toast]);
 
   // Space toggles play/pause (outside text fields).
   useEffect(() => {
@@ -46,7 +67,12 @@ export default function App() {
     <div className="app">
       <TitleBar playing={playing} count={active.length} />
       <main className="layout">
-        <MixerPanel mixer={mixer} onAddSound={() => setCreate({ tab: 'library' })} onPickVideo={setPickFor} />
+        <MixerPanel
+          mixer={mixer}
+          onAddSound={() => setCreate({ tab: 'library' })}
+          onPickVideo={setPickFor}
+          onNotify={setToast}
+        />
         <TemplatesPanel
           mixer={mixer}
           onCreate={() => setCreate({ tab: 'library' })}
@@ -74,6 +100,12 @@ export default function App() {
           );
         })}
       </div>
+
+      {toast && (
+        <div className="toast" role="status">
+          {toast}
+        </div>
+      )}
 
       {create && <CreateModal mixer={mixer} initialTab={create.tab} initialQuery={create.query} onClose={() => setCreate(null)} />}
       {pickFor && <VideoPickerModal mixer={mixer} soundId={pickFor} onClose={() => setPickFor(null)} />}

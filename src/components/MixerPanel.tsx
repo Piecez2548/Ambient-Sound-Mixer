@@ -1,5 +1,5 @@
 import { useRef, type CSSProperties } from 'react';
-import { AlertCircle, LoaderCircle, Pause, Play, Plus, Timer, Volume1, Volume2, VolumeX, X } from 'lucide-react';
+import { AlertCircle, LoaderCircle, Pause, Play, Plus, Share2, Timer, Volume1, Volume2, VolumeX, X } from 'lucide-react';
 import type { Mixer } from '../state/useMixer';
 import { Slider } from './Slider';
 
@@ -24,9 +24,19 @@ interface Props {
   mixer: Mixer;
   onAddSound: () => void;
   onPickVideo: (soundId: string) => void;
+  onNotify: (message: string) => void;
 }
 
-export function MixerPanel({ mixer, onAddSound, onPickVideo }: Props) {
+export function MixerPanel({ mixer, onAddSound, onPickVideo, onNotify }: Props) {
+  const share = async () => {
+    const url = mixer.shareUrl();
+    try {
+      await navigator.clipboard.writeText(url);
+      onNotify('Link copied — anyone who opens it gets this mix');
+    } catch {
+      window.prompt('Copy this link to share your mix:', url);
+    }
+  };
   const lastMaster = useRef(50);
   const { master, setMaster } = mixer;
   const MasterIcon = master === 0 ? VolumeX : master < 50 ? Volume1 : Volume2;
@@ -106,9 +116,16 @@ export function MixerPanel({ mixer, onAddSound, onPickVideo }: Props) {
           <div className="sound-empty">Pick a template or add sounds to start your mix.</div>
         )}
 
-        <button className="add-sound" onClick={onAddSound}>
-          <Plus size={16} /> Add sound
-        </button>
+        <div className="mixer-actions">
+          <button className="add-sound" onClick={onAddSound}>
+            <Plus size={16} /> Add sound
+          </button>
+          {mixer.active.length > 0 && (
+            <button className="add-sound share" onClick={share} title="Copy a link to this mix">
+              <Share2 size={15} /> Share
+            </button>
+          )}
+        </div>
       </div>
 
       <footer className="mixer-foot">

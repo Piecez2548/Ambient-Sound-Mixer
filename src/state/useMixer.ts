@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_MIX, SOUNDS, customToDef, type CustomSound, type SoundDef } from '../data/sounds';
 import { TEMPLATES, type MixEntry, type Template } from '../data/templates';
+import { buildShareUrl, type SharedMix } from '../lib/share';
 import { usePersistentState } from '../lib/storage';
-import { searchVideos, type VideoResult } from '../lib/youtube';
+import { searchVideos, thumbUrl, type VideoResult } from '../lib/youtube';
 import type { PlayerStatus } from '../components/YouTubeChannel';
 
 export type ChannelStatus = PlayerStatus | 'searching' | 'error';
@@ -12,6 +13,9 @@ export interface ChannelState {
 }
 
 const FADE_MS = 30_000;
+
+const shortName = (title: string) => (title.length > 28 ? `${title.slice(0, 26)}…` : title);
+const makeVideo = (id: string, title: string): VideoResult => ({ id, title, channel: '', thumbnail: thumbUrl(id) });
 
 export function useMixer() {
   const [active, setActive] = usePersistentState<MixEntry[]>('asm:active', DEFAULT_MIX);
@@ -151,10 +155,60 @@ export function useMixer() {
 
   const addCustomSound = useCallback((video: VideoResult) => {
     const id = `yt-${video.id}`;
-    const name = video.title.length > 28 ? `${video.title.slice(0, 26)}…` : video.title;
+    const name = shortName(video.title);
     setCustomSounds((list) => (list.some((c) => c.id === id) ? list : [...list, { id, name, video }]));
     addSound(id);
   }, [setCustomSounds, addSound]);
+
+  /** Link that recreates the current mix (sounds, volumes, chosen videos). */
+  const shareUrl = useCallback(() => {
+    const sounds = active.map((e) => {
+      const def = soundById.get(e.id);
+      const video = videos[e.id];
+      const custom = e.id.startsWith('yt-');
+      return {
+        id: e.id,
+        volume: e.volume,
+        videoId: !custom && video && video.id !== def?.defaultVideo?.id ? video.id : undefined,
+        title: custom ? def?.video?.title : undefined,
+      };
+    });
+    return buildShareUrl({ master, sounds });
+  }, [active, master, soundById, videos]);
+
+  /** Replace the current mix with one opened from a shared link (paused). */
+  const loadShared = useCallback((mix: SharedMix) => {
+    const builtIn = new Map(SOUNDS.map((s) => [s.id, s]));
+    const added: CustomSound[] = [];
+    const chosen: Record<string, VideoResult> = {};
+    const entries: MixEntry[] = [];
+    for (const s of mix.sounds) {
+      if (s.id.startsWith('yt-')) {
+        const videoId = s.id.slice(3);
+        if (!/^[\w-]{11}$/.test(videoId)) continue;
+        const title = s.title || 'YouTube sound';
+        added.push({ id: s.id, name: shortName(title), video: makeVideo(videoId, title) });
+      } else {
+        const def = builtIn.get(s.id);
+        if (!def) continue;
+        if (s.videoId) chosen[s.id] = makeVideo(s.videoId, `${def.name} (shared)`);
+      }
+      entries.push({ id: s.id, volume: s.volume });
+    }
+    if (!entries.length) return false;
+    setCustomSounds((list) => [...list, ...added.filter((a) => !list.some((c) => c.id === a.id))]);
+    setVideos((v) => {
+      const next = { ...v, ...chosen };
+      // Built-in sounds without a shared pick go back to their default video.
+      for (const e of entries) if (!e.id.startsWith('yt-') && !chosen[e.id]) delete next[e.id];
+      return next;
+    });
+    setActive(entries);
+    setMaster(mix.master);
+    setTemplateId(null);
+    setPlaying(false);
+    return true;
+  }, [setCustomSounds, setVideos, setActive, setMaster, setTemplateId]);
 
   const saveTemplate = useCallback((title: string, description: string, moods: Template['moods']) => {
     const coverVideo = active.map((e) => videos[e.id]).find(Boolean);
@@ -205,6 +259,8 @@ export function useMixer() {
     deleteTemplate,
     chooseVideo,
     reportPlayerError,
+    shareUrl,
+    loadShared,
   };
 }
 

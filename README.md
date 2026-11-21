@@ -23,7 +23,9 @@ You don't need an API key locally: the app calls the search API on the productio
 ## How it works
 
 - **Each sound** has a search query (`src/data/sounds.ts`). The app asks `api/search` for long, embeddable videos, picks the first result, and plays it in a hidden YouTube IFrame Player, one player per sound, looping forever.
-- **`api/search.ts`** is a Vercel Function that holds the YouTube Data API key (`YOUTUBE_API_KEY` or `VITE_YOUTUBE_API_KEY` in the Vercel project's Environment Variables). Vercel's CDN caches each query for 7 days, so all visitors share one result and the free quota (10,000 units/day, 100 per search) goes much further. Requests from websites other than this app are refused.
+- **Built-in videos**: every sound and template card ships a default video (`DEFAULT_VIDEOS` / `imageVideoId`), so normal use spends no search quota. Searching is only needed for new videos.
+- **Share**: the Share button copies a link with the whole mix packed into the URL hash (`#mix=…`: sounds, volumes, master, chosen videos, YouTube-added sounds). Opening it loads the mix paused. There's no server or database involved (`src/lib/share.ts`).
+- **`api/search.ts`** is a Vercel Function that holds the YouTube Data API key (`YOUTUBE_API_KEY` in the Vercel project's Environment Variables, as a Secret. Vercel won't store `VITE_`-prefixed names as secrets). Vercel's CDN caches each query for 7 days, so all visitors share one result and the free quota (10,000 units/day, 100 per search) goes much further. Requests from websites other than this app are refused.
 - If a video won't play (the owner blocks embedding, error 101/150), the app skips to the next search result automatically.
 - **Click a sound's icon** in the left panel to choose a different video, or search for a new one.
 - **Create your own**: add sounds from the library, search YouTube and add any video as a sound, or save the current mix as your own template.
@@ -33,6 +35,7 @@ You don't need an API key locally: the app calls the search API on the productio
 
 - Loads the app through a local server at `http://127.0.0.1:47821` instead of `file://`, because YouTube embeds won't play without a Referer.
 - Closing the window keeps it running in the system tray, so sounds keep playing. The tray menu has Play/Pause, **Start with Windows** (starts hidden in the tray), and Quit.
+- **Ctrl+Alt+P** toggles play/pause from anywhere, even while the window is hidden. If another app already uses that shortcut, it's skipped silently.
 - Checks GitHub Releases on startup and installs updates automatically (`electron-updater`).
 - The installer isn't code-signed, so Windows SmartScreen shows "Windows protected your PC" the first time: click **More info → Run anyway**.
 
@@ -46,4 +49,4 @@ You don't need an API key locally: the app calls the search API on the productio
 
 In Google Cloud Console → Credentials:
 - API restrictions: YouTube Data API v3
-- Website restrictions: `https://ambient-sound-mixer-lake.vercel.app/*`. The function sends this as its Referer. You can remove the old localhost / 127.0.0.1 entries; the browser no longer calls Google directly.
+- Website restrictions: `https://ambient-sound-mixer-lake.vercel.app/*` only. The function sends this as its Referer; the browser never calls Google directly.

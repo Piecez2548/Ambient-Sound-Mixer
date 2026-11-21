@@ -7,10 +7,13 @@ import {
   CloudRain,
   Coffee,
   Droplets,
+  Fan,
   Flame,
+  House,
   Keyboard,
   Moon,
   Music,
+  Plane,
   TrainFront,
   Trees,
   Waves,
@@ -61,6 +64,9 @@ const DEFAULT_VIDEOS: Record<string, VideoResult> = {
   city: yt('ebAKJA3nSFw', 'City Sounds - 10 HOURS | for Relaxing Sleep, Meditation, Yoga or Study - City Ambience', 'Pure Relaxing Vibes'),
   'white-noise': yt('nMfPqeZjc2c', 'White Noise Black Screen | Sleep, Study, Focus | 10 Hours', 'Relaxing White Noise'),
   'brown-noise': yt('GrwTSN2Saak', 'Deep Layered Brown Noise ( 10 Hours )', 'crysknife007'),
+  'tin-roof': yt('KOEsb1x40Lc', 'Black Screen Rain On Tin Roof 10 Hours, Rain No Thunder Sounds, Hard Rain Sounds For Sleeping', 'Still Point'),
+  fan: yt('px1PqCX6i8c', 'Box Fan White Noise for Sleep, Relaxation or Studying | 10 Hours', 'Relaxing White Noise'),
+  airplane: yt('co7KgV2edvI', 'Airplane Cabin White Noise Jet Sounds | Great for Sleeping, Studying, Reading & Homework | 10 Hours', 'Relaxing White Noise'),
 };
 
 export interface CustomSound {
@@ -77,6 +83,7 @@ export const SOUNDS: SoundDef[] = [
   { id: 'campfire', name: 'Camp', category: 'Nature', query: 'crackling campfire sounds night no music', icon: Flame, color: '#fb923c' },
   { id: 'waves', name: 'Waves', category: 'Water', query: 'ocean waves sounds no music 10 hours', icon: Waves, color: '#38bdf8' },
   { id: 'forest', name: 'Forest', category: 'Nature', query: 'forest ambience birds sounds no music', icon: Trees, color: '#86efac' },
+  { id: 'tin-roof', name: 'Tin Roof Rain', category: 'Water', query: 'rain on tin roof sounds no music 10 hours', icon: House, color: '#93c5fd' },
   { id: 'stream', name: 'Stream', category: 'Water', query: 'gentle stream water sounds no music', icon: Droplets, color: '#67e8f9' },
   { id: 'birds', name: 'Birds', category: 'Nature', query: 'morning birds singing sounds no music', icon: Bird, color: '#bef264' },
   { id: 'night', name: 'Night', category: 'Nature', query: 'night crickets sounds ambience no music', icon: Moon, color: '#c4b5fd' },
@@ -84,7 +91,9 @@ export const SOUNDS: SoundDef[] = [
   { id: 'library', name: 'Library', category: 'Indoor', query: 'library ambience quiet page turning sounds', icon: BookOpen, color: '#e9d5ff' },
   { id: 'typing', name: 'Typing', category: 'Indoor', query: 'keyboard typing sounds ambience', icon: Keyboard, color: '#cbd5e1' },
   { id: 'train', name: 'Train', category: 'Urban', query: 'train ride sounds ambience no music', icon: TrainFront, color: '#fda4af' },
+  { id: 'airplane', name: 'Airplane', category: 'Urban', query: 'airplane cabin sound for sleeping 10 hours', icon: Plane, color: '#7dd3fc' },
   { id: 'city', name: 'City', category: 'Urban', query: 'city street ambience sounds no music', icon: Building2, color: '#94a3b8' },
+  { id: 'fan', name: 'Fan', category: 'Noise', query: 'box fan sound for sleeping 10 hours', icon: Fan, color: '#a5f3fc' },
   { id: 'white-noise', name: 'White Noise', category: 'Noise', query: 'white noise 10 hours', icon: AudioWaveform, color: '#f1f5f9' },
   { id: 'brown-noise', name: 'Brown Noise', category: 'Noise', query: 'brown noise 10 hours', icon: AudioWaveform, color: '#d6a77a' },
 ].map((s) => ({ ...s, defaultVideo: DEFAULT_VIDEOS[s.id] }));

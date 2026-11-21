@@ -1,7 +1,7 @@
 // Electron shell. In dev it loads the Vite server; in production it serves dist/
 // over a local http server, because YouTube embeds refuse to play from file://
 // (no Referer -> error 153).
-const { app, BrowserWindow, Menu, Tray, ipcMain, nativeImage, shell } = require('electron');
+const { app, BrowserWindow, Menu, Tray, globalShortcut, ipcMain, nativeImage, shell } = require('electron');
 const path = require('node:path');
 const http = require('node:http');
 const fs = require('node:fs');
@@ -93,6 +93,13 @@ function showWindow() {
   win.focus();
 }
 
+// Play/Pause from anywhere — tray menu and the global shortcut use this.
+const PLAY_SHORTCUT = 'CommandOrControl+Alt+P';
+function togglePlay() {
+  if (win && !win.isDestroyed()) win.webContents.send('toggle-play');
+  else showWindow();
+}
+
 function isOpenAtLogin() {
   return app.getLoginItemSettings({ args: ['--hidden'] }).openAtLogin;
 }
@@ -105,10 +112,9 @@ function buildTrayMenu() {
       { label: 'Open Ambient Sound Mixer', click: showWindow },
       {
         label: isPlaying ? 'Pause' : 'Play',
-        click: () => {
-          if (win && !win.isDestroyed()) win.webContents.send('toggle-play');
-          else showWindow();
-        },
+        accelerator: globalShortcut.isRegistered(PLAY_SHORTCUT) ? PLAY_SHORTCUT : undefined,
+        registerAccelerator: false,
+        click: togglePlay,
       },
       { type: 'separator' },
       {
@@ -211,6 +217,12 @@ if (!app.requestSingleInstanceLock()) {
 } else {
   app.on('second-instance', showWindow);
   app.whenReady().then(async () => {
+    // Fails quietly if another app already owns the combination.
+    try {
+      globalShortcut.register(PLAY_SHORTCUT, togglePlay);
+    } catch {
+      /* ignore */
+    }
     createTray();
     await createWindow();
     checkForUpdates();
@@ -218,6 +230,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('before-quit', () => {
     isQuitting = true;
   });
+  app.on('will-quit', () => globalShortcut.unregisterAll());
   // Keep running in the tray when the window is closed.
   app.on('window-all-closed', () => {});
 }

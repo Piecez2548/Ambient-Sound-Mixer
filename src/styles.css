@@ -279,6 +279,41 @@ a {
   color: var(--text);
   border-color: var(--accent-2);
 }
+.mixer-actions {
+  display: flex;
+  gap: 8px;
+}
+.mixer-actions .add-sound {
+  flex: 1;
+}
+.mixer-actions .add-sound.share {
+  flex: 0 0 auto;
+  padding-inline: 14px;
+  border-style: solid;
+  border-color: var(--border);
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 100;
+  max-width: calc(100vw - 32px);
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: var(--panel-3);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+  animation: toast-in 0.2s ease-out;
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+}
 
 .mixer-foot {
   display: flex;
