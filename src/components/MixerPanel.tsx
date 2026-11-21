@@ -1,6 +1,8 @@
 import { useRef, type CSSProperties } from 'react';
-import { AlertCircle, LoaderCircle, Pause, Play, Plus, Share2, Timer, Volume1, Volume2, VolumeX, X } from 'lucide-react';
+import { AlarmClock, AlertCircle, Brain, LoaderCircle, Pause, Play, Plus, Share2, Timer, Volume1, Volume2, VolumeX, X } from 'lucide-react';
 import type { Mixer } from '../state/useMixer';
+import type { Routines } from '../state/useRoutines';
+import type { RoutinesTab } from './RoutinesModal';
 import { Slider } from './Slider';
 
 const TIMER_OPTIONS: { label: string; minutes: number | null }[] = [
@@ -25,9 +27,12 @@ interface Props {
   onAddSound: () => void;
   onPickVideo: (soundId: string) => void;
   onNotify: (message: string) => void;
+  routines: Routines;
+  focusLabel: string | null;
+  onOpenRoutines: (tab: RoutinesTab) => void;
 }
 
-export function MixerPanel({ mixer, onAddSound, onPickVideo, onNotify }: Props) {
+export function MixerPanel({ mixer, onAddSound, onPickVideo, onNotify, routines, focusLabel, onOpenRoutines }: Props) {
   const share = async () => {
     const url = mixer.shareUrl();
     try {
@@ -99,6 +104,16 @@ export function MixerPanel({ mixer, onAddSound, onPickVideo, onNotify }: Props) 
                     <span className="sound-error" title={error}>
                       <AlertCircle size={11} /> Error
                     </span>
+                  ) : video ? (
+                    <a
+                      className="sound-source"
+                      href={`https://www.youtube.com/watch?v=${video.id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={`${video.title}${video.channel ? ` — ${video.channel}` : ''}\nOpen on YouTube`}
+                    >
+                      {[video.channel, video.title].filter(Boolean).join(' · ')}
+                    </a>
                   ) : (
                     sound.category
                   )}
@@ -126,6 +141,16 @@ export function MixerPanel({ mixer, onAddSound, onPickVideo, onNotify }: Props) 
             </button>
           )}
         </div>
+      </div>
+
+      <div className="routine-bar">
+        <button className={`chip small ${routines.run ? 'active' : ''}`} onClick={() => onOpenRoutines('focus')}>
+          <Brain size={13} /> {focusLabel ?? 'Focus timer'}
+        </button>
+        <button className={`chip small ${routines.alarm.enabled ? 'active' : ''}`} onClick={() => onOpenRoutines('alarm')}>
+          <AlarmClock size={13} /> {routines.alarm.enabled ? `Alarm ${routines.alarm.time}` : 'Alarm'}
+        </button>
+        {mixer.fadingIn && <span className="routine-note">Fading in…</span>}
       </div>
 
       <footer className="mixer-foot">

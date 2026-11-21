@@ -29,6 +29,8 @@ export function useMixer() {
   const [timerEnd, setTimerEnd] = useState<number | null>(null);
   const [timerMinutes, setTimerMinutes] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  // Gentle start (wake-up alarm): volume ramps from 0 to full over this window.
+  const [fadeIn, setFadeIn] = useState<{ start: number; end: number } | null>(null);
 
   const failed = useRef(new Map<string, Set<string>>());
   const resolving = useRef(new Set<string>());
@@ -93,12 +95,25 @@ export function useMixer() {
     setVideos((v) => ({ ...v, [soundId]: video }));
   }, [setVideos]);
 
-  // Sleep timer with a 30 s fade-out.
+  // Sleep timer with a 30 s fade-out; also drives the fade-in ramp.
   useEffect(() => {
-    if (!timerEnd) return;
+    if (!timerEnd && !fadeIn) return;
     const t = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(t);
-  }, [timerEnd]);
+  }, [timerEnd, fadeIn]);
+
+  const fadeInFactor = fadeIn ? Math.min(1, Math.max(0, (now - fadeIn.start) / (fadeIn.end - fadeIn.start))) : 1;
+  useEffect(() => {
+    if (fadeIn && (now >= fadeIn.end || !playing)) setFadeIn(null);
+  }, [fadeIn, now, playing]);
+
+  /** Start playing, ramping the volume up from silence over `minutes`. */
+  const playWithFadeIn = useCallback((minutes: number) => {
+    const start = Date.now();
+    setNow(start);
+    setFadeIn(minutes > 0 ? { start, end: start + minutes * 60_000 } : null);
+    setPlaying(true);
+  }, []);
 
   const remaining = timerEnd ? Math.max(0, timerEnd - now) : null;
   useEffect(() => {
@@ -119,8 +134,8 @@ export function useMixer() {
   }, []);
 
   const effectiveVolume = useCallback(
-    (volume: number) => Math.round((volume * master * fade) / 100),
-    [master, fade],
+    (volume: number) => Math.round((volume * master * fade * fadeInFactor) / 100),
+    [master, fade, fadeInFactor],
   );
 
   const addSound = useCallback((id: string, volume = 50) => {
@@ -152,6 +167,12 @@ export function useMixer() {
     setTemplateId(t.id);
     setPlaying(true);
   }, [templateId, setActive, setTemplateId, soundById]);
+
+  /** Switch to a template's sounds (alarm, focus timer) without the click-to-toggle behaviour. */
+  const loadTemplate = useCallback((t: Template) => {
+    setActive(t.sounds.filter((s) => soundById.has(s.id)).map((s) => ({ ...s })));
+    setTemplateId(t.id);
+  }, [setActive, setTemplateId, soundById]);
 
   const addCustomSound = useCallback((video: VideoResult) => {
     const id = `yt-${video.id}`;
@@ -261,6 +282,9 @@ export function useMixer() {
     reportPlayerError,
     shareUrl,
     loadShared,
+    loadTemplate,
+    playWithFadeIn,
+    fadingIn: fadeIn !== null,
   };
 }
 

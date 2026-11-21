@@ -5,8 +5,10 @@ import { TemplatesPanel } from './components/TemplatesPanel';
 import { TitleBar } from './components/TitleBar';
 import { VideoPickerModal } from './components/VideoPickerModal';
 import { YouTubeChannel } from './components/YouTubeChannel';
+import { RoutinesModal, formatClock, type RoutinesTab } from './components/RoutinesModal';
 import { readSharedMix } from './lib/share';
 import { useMixer } from './state/useMixer';
+import { useRoutines } from './state/useRoutines';
 
 export default function App() {
   const mixer = useMixer();
@@ -14,6 +16,12 @@ export default function App() {
   const [pickFor, setPickFor] = useState<string | null>(null);
   const { playing, setPlaying, active, loadShared } = mixer;
   const [toast, setToast] = useState<string | null>(null);
+  const routines = useRoutines(mixer);
+  const [routinesTab, setRoutinesTab] = useState<RoutinesTab | null>(null);
+  const focusLabel =
+    routines.run && routines.focusRemaining !== null
+      ? `${routines.run.phase === 'focus' ? 'Focus' : 'Break'} ${formatClock(routines.focusRemaining)}`
+      : null;
 
   // Opened from a shared link (#mix=…): load that mix, then tidy the URL.
   useEffect(() => {
@@ -65,13 +73,16 @@ export default function App() {
 
   return (
     <div className="app">
-      <TitleBar playing={playing} count={active.length} />
+      <TitleBar playing={playing} count={active.length} extra={focusLabel} />
       <main className="layout">
         <MixerPanel
           mixer={mixer}
           onAddSound={() => setCreate({ tab: 'library' })}
           onPickVideo={setPickFor}
           onNotify={setToast}
+          routines={routines}
+          focusLabel={focusLabel}
+          onOpenRoutines={setRoutinesTab}
         />
         <TemplatesPanel
           mixer={mixer}
@@ -107,6 +118,9 @@ export default function App() {
         </div>
       )}
 
+      {routinesTab && (
+        <RoutinesModal mixer={mixer} routines={routines} initialTab={routinesTab} onClose={() => setRoutinesTab(null)} />
+      )}
       {create && <CreateModal mixer={mixer} initialTab={create.tab} initialQuery={create.query} onClose={() => setCreate(null)} />}
       {pickFor && <VideoPickerModal mixer={mixer} soundId={pickFor} onClose={() => setPickFor(null)} />}
     </div>
