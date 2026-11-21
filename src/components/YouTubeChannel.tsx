@@ -97,5 +97,5 @@ export function YouTubeChannel({ videoId, volume, playing, onStatus, onError }: 
     else playerRef.current.pauseVideo();
   }, [playing]);
 
-  return <div ref={hostRef} className="yt-channel" />;
+  return <div ref={hostRef} className="yt-channel" data-volume={volume} />;
 }

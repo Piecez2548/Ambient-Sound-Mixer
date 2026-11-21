@@ -1,8 +1,9 @@
-import { useRef, type CSSProperties } from 'react';
+import { useRef, useState, type CSSProperties } from 'react';
 import {
   AlarmClock,
   AlertCircle,
   Brain,
+  Gauge,
   LoaderCircle,
   Pause,
   Play,
@@ -16,7 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import { categoryName, soundName, useI18n, type Key } from '../i18n';
-import type { Mixer } from '../state/useMixer';
+import { MIN_LIMIT, type Mixer } from '../state/useMixer';
 import type { Routines } from '../state/useRoutines';
 import type { RoutinesTab } from './RoutinesModal';
 import { Slider } from './Slider';
@@ -68,6 +69,8 @@ export function MixerPanel({ mixer, onAddSound, onPickVideo, onNotify, routines,
     if (next) onNotify(t('mixer.naturalOn'));
   };
 
+  const [limitOpen, setLimitOpen] = useState(false);
+  const limited = mixer.limit < 100;
   const lastMaster = useRef(50);
   const { master, setMaster } = mixer;
   const MasterIcon = master === 0 ? VolumeX : master < 50 ? Volume1 : Volume2;
@@ -99,7 +102,26 @@ export function MixerPanel({ mixer, onAddSound, onPickVideo, onNotify, routines,
         </button>
         <Slider value={master} onChange={setMaster} label={t('mixer.masterAria')} />
         <span className="master-value">{master}%</span>
+        <button
+          className={`icon-btn ghost limit-btn ${limited ? 'on' : ''}`}
+          onClick={() => setLimitOpen((o) => !o)}
+          aria-expanded={limitOpen}
+          aria-label={t('mixer.limit')}
+          title={limited ? t('mixer.limitOn', { n: mixer.limit }) : t('mixer.limit')}
+        >
+          <Gauge size={16} />
+        </button>
       </div>
+      {(limitOpen || limited) && (
+        <div className="limit-row">
+          <div className="limit-head">
+            <span>{t('mixer.limit')}</span>
+            <span className="limit-value">{mixer.limit}%</span>
+          </div>
+          <Slider value={mixer.limit} onChange={mixer.setLimit} label={t('mixer.limit')} min={MIN_LIMIT} max={100} />
+          {limitOpen && <p className="hint">{t('mixer.limitHint')}</p>}
+        </div>
+      )}
 
       <div className="sound-list">
         {mixer.active.map((entry) => {

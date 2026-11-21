@@ -13,6 +13,7 @@ export interface ChannelState {
 }
 
 const FADE_MS = 30_000;
+export const MIN_LIMIT = 20;
 
 // "Natural variation": each sound's volume drifts below its set level along two
 // slow sine waves with periods/phases seeded by the sound id, so every sound
@@ -47,6 +48,10 @@ export function useMixer() {
   const [customTemplates, setCustomTemplates] = usePersistentState<Template[]>('asm:customTemplates', []);
   const [templateId, setTemplateId] = usePersistentState<string | null>('asm:template', null);
   const [natural, setNatural] = usePersistentState('asm:natural', false);
+  // Loudest the app may ever get (% of full YouTube volume). Kept per device and
+  // not synced: headphones and speakers need different ceilings.
+  const [limitRaw, setLimit] = usePersistentState('asm:limit', 100);
+  const limit = Math.min(100, Math.max(MIN_LIMIT, Number(limitRaw) || 100));
   const [playing, setPlaying] = useState(false);
   const [channels, setChannels] = useState<Record<string, ChannelState>>({});
   const [timerEnd, setTimerEnd] = useState<number | null>(null);
@@ -162,9 +167,10 @@ export function useMixer() {
   const effectiveVolume = useCallback(
     (volume: number, soundId?: string) => {
       const drift = drifting && soundId ? driftFactor(soundId, now) : 1;
-      return Math.round((volume * master * fade * fadeInFactor * drift) / 100);
+      // sound × master × limit: with the limit at 60, full sliders mean 60% of YouTube's maximum.
+      return Math.round((volume * master * fade * fadeInFactor * drift * limit) / 10_000);
     },
-    [master, fade, fadeInFactor, drifting, now],
+    [master, fade, fadeInFactor, drifting, now, limit],
   );
 
   const addSound = useCallback((id: string, volume = 50) => {
@@ -316,6 +322,8 @@ export function useMixer() {
     fadingIn: fadeIn !== null,
     natural,
     setNatural,
+    limit,
+    setLimit,
     /** Current natural-variation level for a sound (0–1), for the UI. */
     driftLevel: (soundId: string) => (drifting ? driftFactor(soundId, now) : 1),
   };
