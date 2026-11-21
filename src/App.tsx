@@ -6,21 +6,23 @@ import { TitleBar } from './components/TitleBar';
 import { VideoPickerModal } from './components/VideoPickerModal';
 import { YouTubeChannel } from './components/YouTubeChannel';
 import { RoutinesModal, formatClock, type RoutinesTab } from './components/RoutinesModal';
+import { useI18n } from './i18n';
 import { readSharedMix } from './lib/share';
 import { useMixer } from './state/useMixer';
 import { useRoutines } from './state/useRoutines';
 
 export default function App() {
   const mixer = useMixer();
+  const { t } = useI18n();
   const [create, setCreate] = useState<{ tab: CreateTab; query?: string } | null>(null);
   const [pickFor, setPickFor] = useState<string | null>(null);
   const { playing, setPlaying, active, loadShared } = mixer;
   const [toast, setToast] = useState<string | null>(null);
-  const routines = useRoutines(mixer);
+  const routines = useRoutines(mixer, t);
   const [routinesTab, setRoutinesTab] = useState<RoutinesTab | null>(null);
   const focusLabel =
     routines.run && routines.focusRemaining !== null
-      ? `${routines.run.phase === 'focus' ? 'Focus' : 'Break'} ${formatClock(routines.focusRemaining)}`
+      ? `${routines.run.phase === 'focus' ? t('rt.focus') : t('rt.break')} ${formatClock(routines.focusRemaining)}`
       : null;
 
   // Opened from a shared link (#mix=…): load that mix, then tidy the URL.
@@ -28,12 +30,13 @@ export default function App() {
     const open = () => {
       const shared = readSharedMix();
       if (!shared) return;
-      if (loadShared(shared)) setToast(`Shared mix loaded (${shared.sounds.length} sounds) — press play`);
+      if (loadShared(shared)) setToast(t('toast.sharedLoaded', { n: shared.sounds.length }));
       history.replaceState(null, '', location.pathname + location.search);
     };
     open();
     window.addEventListener('hashchange', open);
     return () => window.removeEventListener('hashchange', open);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadShared]);
 
   useEffect(() => {
@@ -66,10 +69,10 @@ export default function App() {
   // Media keys / OS media overlay.
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
-    navigator.mediaSession.metadata = new MediaMetadata({ title: 'Ambient Sound Mixer', artist: `${active.length} sounds` });
+    navigator.mediaSession.metadata = new MediaMetadata({ title: 'Ambient Sound Mixer', artist: t('media.sounds', { n: active.length }) });
     navigator.mediaSession.setActionHandler('play', () => setPlaying(true));
     navigator.mediaSession.setActionHandler('pause', () => setPlaying(false));
-  }, [active.length, setPlaying]);
+  }, [active.length, setPlaying, t]);
 
   return (
     <div className="app">
@@ -100,7 +103,7 @@ export default function App() {
             <YouTubeChannel
               key={`${entry.id}:${video.id}`}
               videoId={video.id}
-              volume={mixer.effectiveVolume(entry.volume)}
+              volume={mixer.effectiveVolume(entry.volume, entry.id)}
               playing={playing}
               onStatus={(status) => mixer.setChannel(entry.id, { status })}
               onError={(code) => {

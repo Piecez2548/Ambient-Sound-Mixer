@@ -31,7 +31,7 @@ body,
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Inter', 'Noto Sans Thai', 'Leelawadee UI', 'Segoe UI', system-ui, sans-serif;
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
 }
@@ -273,6 +273,29 @@ a {
 .routine-note {
   font-size: 11px;
   color: var(--accent-2);
+}
+.lang-switch {
+  display: inline-flex;
+  margin-left: 6px;
+  padding: 2px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  -webkit-app-region: no-drag;
+}
+.lang-switch button {
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.lang-switch button:hover {
+  color: var(--text);
+}
+.lang-switch button.active {
+  background: var(--accent-soft);
+  color: #fff;
 }
 .titlebar-pill {
   padding: 2px 8px;
@@ -521,7 +544,13 @@ a {
   min-width: 0;
   height: 4px;
   border-radius: 4px;
-  background: linear-gradient(to right, var(--accent) var(--fill), var(--track) var(--fill));
+  background: linear-gradient(
+    to right,
+    var(--accent) var(--live, var(--fill)),
+    rgba(139, 92, 246, 0.35) var(--live, var(--fill)),
+    rgba(139, 92, 246, 0.35) var(--fill),
+    var(--track) var(--fill)
+  );
   cursor: pointer;
   margin: 0;
 }
@@ -1297,7 +1326,8 @@ a {
   .search {
     width: 100%;
   }
-  .titlebar-status {
+  .titlebar-status .status-text,
+  .titlebar-status .titlebar-pill {
     display: none;
   }
 }

@@ -93,6 +93,57 @@ function showWindow() {
   win.focus();
 }
 
+// Tray menu and close-dialog text. The renderer reports the language the user
+// picked; before that, guess like the web app does (Thai locale or timezone).
+const TEXT = {
+  en: {
+    open: 'Open Ambient Sound Mixer',
+    play: 'Play',
+    pause: 'Pause',
+    startWithWindows: 'Start with Windows',
+    keepPlaying: 'Keep playing when the window is closed',
+    quit: 'Quit',
+    tooltipPlaying: 'Ambient Sound Mixer — playing',
+    askMessage: 'Keep playing after closing the window?',
+    askDetail:
+      'Keep playing: the window closes but sounds continue from the tray icon next to the clock. Right-click it to pause or quit.\n\nQuit: closing the window stops everything.\n\nYour choice is remembered. Change it any time from the tray menu.',
+    askTray: 'Keep playing in tray',
+    askQuit: 'Quit',
+    askCancel: 'Cancel',
+  },
+  th: {
+    open: 'เปิด Ambient Sound Mixer',
+    play: 'เล่น',
+    pause: 'หยุดชั่วคราว',
+    startWithWindows: 'เปิดพร้อม Windows',
+    keepPlaying: 'เล่นต่อเมื่อปิดหน้าต่าง',
+    quit: 'ออกจากแอป',
+    tooltipPlaying: 'Ambient Sound Mixer — กำลังเล่น',
+    askMessage: 'เล่นเสียงต่อหลังปิดหน้าต่างไหม?',
+    askDetail:
+      'เล่นต่อ: หน้าต่างจะปิด แต่เสียงยังเล่นต่อจากไอคอนข้างนาฬิกา คลิกขวาที่ไอคอนเพื่อหยุดหรือออกจากแอป\n\nออกจากแอป: ปิดหน้าต่างแล้วหยุดทุกอย่าง\n\nแอปจะจำคำตอบไว้ เปลี่ยนได้ตลอดจากเมนูที่ไอคอน',
+    askTray: 'เล่นต่อใน tray',
+    askQuit: 'ออกจากแอป',
+    askCancel: 'ยกเลิก',
+  },
+};
+function guessLang() {
+  try {
+    if (app.getLocale().toLowerCase().startsWith('th')) return 'th';
+    if (Intl.DateTimeFormat().resolvedOptions().timeZone === 'Asia/Bangkok') return 'th';
+  } catch {
+    /* ignore */
+  }
+  return 'en';
+}
+const text = () => TEXT[readSettings().lang] ?? TEXT[guessLang()];
+
+ipcMain.on('language-changed', (_event, lang) => {
+  if (!TEXT[lang] || readSettings().lang === lang) return;
+  writeSettings({ lang });
+  buildTrayMenu();
+});
+
 // Play/Pause from anywhere — tray menu and the global shortcut use this.
 const PLAY_SHORTCUT = 'CommandOrControl+Alt+P';
 function togglePlay() {
@@ -110,13 +161,13 @@ async function askCloseAction() {
   if (asking || !win || win.isDestroyed()) return;
   asking = true;
   try {
+    const tx = text();
     const { response } = await dialog.showMessageBox(win, {
       type: 'question',
       title: 'Ambient Sound Mixer',
-      message: 'Keep playing after closing the window?',
-      detail:
-        'Keep playing: the window closes but sounds continue from the tray icon next to the clock. Right-click it to pause or quit.\n\nQuit: closing the window stops everything.\n\nYour choice is remembered. Change it any time from the tray menu.',
-      buttons: ['Keep playing in tray', 'Quit', 'Cancel'],
+      message: tx.askMessage,
+      detail: tx.askDetail,
+      buttons: [tx.askTray, tx.askQuit, tx.askCancel],
       defaultId: 0,
       cancelId: 2,
       noLink: true,
@@ -138,19 +189,20 @@ function isOpenAtLogin() {
 
 function buildTrayMenu() {
   if (!tray) return;
-  tray.setToolTip(isPlaying ? 'Ambient Sound Mixer — playing' : 'Ambient Sound Mixer');
+  const tx = text();
+  tray.setToolTip(isPlaying ? tx.tooltipPlaying : 'Ambient Sound Mixer');
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: 'Open Ambient Sound Mixer', click: showWindow },
+      { label: tx.open, click: showWindow },
       {
-        label: isPlaying ? 'Pause' : 'Play',
+        label: isPlaying ? tx.pause : tx.play,
         accelerator: globalShortcut.isRegistered(PLAY_SHORTCUT) ? PLAY_SHORTCUT : undefined,
         registerAccelerator: false,
         click: togglePlay,
       },
       { type: 'separator' },
       {
-        label: 'Start with Windows',
+        label: tx.startWithWindows,
         type: 'checkbox',
         checked: isOpenAtLogin(),
         click: (item) => {
@@ -159,7 +211,7 @@ function buildTrayMenu() {
         },
       },
       {
-        label: 'Keep playing when the window is closed',
+        label: tx.keepPlaying,
         type: 'checkbox',
         checked: readSettings().closeAction === 'tray',
         click: (item) => {
@@ -168,7 +220,7 @@ function buildTrayMenu() {
         },
       },
       { type: 'separator' },
-      { label: 'Quit', click: quitApp },
+      { label: tx.quit, click: quitApp },
     ]),
   );
 }

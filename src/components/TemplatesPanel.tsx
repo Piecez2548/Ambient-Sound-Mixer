@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { CirclePlay, ListFilter, Search } from 'lucide-react';
 import { MOODS, type Mood } from '../data/templates';
 import { SOUNDS } from '../data/sounds';
+import { moodName, soundName, templateDesc, templateTitle, useI18n } from '../i18n';
 import type { Mixer } from '../state/useMixer';
 import { TemplateCard } from './TemplateCard';
 
@@ -14,6 +15,9 @@ interface Props {
 }
 
 export function TemplatesPanel({ mixer, onCreate, onSearchYouTube }: Props) {
+  const i18n = useI18n();
+  const { t } = i18n;
+  const filterLabel = (f: Filter) => (f === 'All' ? t('tp.all') : f === 'Mine' ? t('tp.mine') : moodName(i18n, f));
   const [query, setQuery] = useState('');
   const [mood, setMood] = useState<Filter>('All');
   const [soundFilter, setSoundFilter] = useState<string[]>([]);
@@ -37,10 +41,16 @@ export function TemplatesPanel({ mixer, onCreate, onSearchYouTube }: Props) {
       if (mood !== 'All' && mood !== 'Mine' && !t.moods.includes(mood)) return false;
       if (soundFilter.length && !soundFilter.every((id) => t.sounds.some((s) => s.id === id))) return false;
       if (!q) return true;
-      const names = t.sounds.map((s) => mixer.soundById.get(s.id)?.name ?? '').join(' ');
-      return `${t.title} ${t.description} ${t.moods.join(' ')} ${names}`.toLowerCase().includes(q);
+      // Match both languages, so "rain" and "ฝน" both work.
+      const names = t.sounds
+        .map((s) => mixer.soundById.get(s.id))
+        .flatMap((s) => (s ? [s.name, soundName(i18n, s)] : []))
+        .join(' ');
+      const moods = t.moods.flatMap((m) => [m, moodName(i18n, m)]).join(' ');
+      const text = `${t.title} ${t.description} ${templateTitle(i18n, t)} ${templateDesc(i18n, t)} ${moods} ${names}`;
+      return text.toLowerCase().includes(q);
     });
-  }, [mixer.templates, mixer.soundById, query, mood, soundFilter]);
+  }, [mixer.templates, mixer.soundById, query, mood, soundFilter, i18n]);
 
   const toggleSoundFilter = (id: string) =>
     setSoundFilter((f) => (f.includes(id) ? f.filter((x) => x !== id) : [...f, id]));
@@ -54,31 +64,31 @@ export function TemplatesPanel({ mixer, onCreate, onSearchYouTube }: Props) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && visible.length === 0 && query.trim() && onSearchYouTube(query.trim())}
-            placeholder="Search for Templates..."
-            aria-label="Search templates"
+            placeholder={t('tp.search')}
+            aria-label={t('tp.searchAria')}
           />
         </label>
         <button className="btn-outline" onClick={onCreate}>
-          Create your own
+          {t('tp.create')}
         </button>
       </div>
 
       <div className="tp-head">
         <div>
-          <h2>Sound Templates</h2>
-          <p>Start with a vibe. customize it your way.</p>
+          <h2>{t('tp.title')}</h2>
+          <p>{t('tp.subtitle')}</p>
         </div>
         <div className="chips">
           {filters.map((f) => (
             <button key={f} className={`chip ${mood === f ? 'active' : ''}`} onClick={() => setMood(f)}>
-              {f}
+              {filterLabel(f)}
             </button>
           ))}
           <div className="filter-wrap" ref={popRef}>
             <button
               className={`chip icon ${soundFilter.length ? 'active' : ''}`}
               onClick={() => setFilterOpen((o) => !o)}
-              aria-label="Filter by sound"
+              aria-label={t('tp.filterAria')}
               aria-expanded={filterOpen}
             >
               <ListFilter size={16} />
@@ -87,10 +97,10 @@ export function TemplatesPanel({ mixer, onCreate, onSearchYouTube }: Props) {
             {filterOpen && (
               <div className="popover">
                 <div className="popover-head">
-                  <span>Must include</span>
+                  <span>{t('tp.mustInclude')}</span>
                   {soundFilter.length > 0 && (
                     <button className="link" onClick={() => setSoundFilter([])}>
-                      Clear
+                      {t('tp.clear')}
                     </button>
                   )}
                 </div>
@@ -103,7 +113,7 @@ export function TemplatesPanel({ mixer, onCreate, onSearchYouTube }: Props) {
                         className={`chip small ${soundFilter.includes(s.id) ? 'active' : ''}`}
                         onClick={() => toggleSoundFilter(s.id)}
                       >
-                        <Icon size={13} /> {s.name}
+                        <Icon size={13} /> {soundName(i18n, s)}
                       </button>
                     );
                   })}
@@ -130,10 +140,10 @@ export function TemplatesPanel({ mixer, onCreate, onSearchYouTube }: Props) {
 
       {visible.length === 0 && (
         <div className="empty">
-          <p>No templates match.</p>
+          <p>{t('tp.none')}</p>
           {query.trim() && (
             <button className="btn-outline" onClick={() => onSearchYouTube(query.trim())}>
-              <CirclePlay size={16} /> Search YouTube for “{query.trim()}”
+              <CirclePlay size={16} /> {t('tp.searchYouTube', { q: query.trim() })}
             </button>
           )}
         </div>

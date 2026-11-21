@@ -13,4 +13,8 @@ contextBridge.exposeInMainWorld('ambient', {
   setPlaying(playing) {
     ipcRenderer.send('playing-changed', Boolean(playing));
   },
+  /** UI language ('th' | 'en') for the tray menu and close dialog. */
+  setLanguage(lang) {
+    ipcRenderer.send('language-changed', String(lang));
+  },
 });

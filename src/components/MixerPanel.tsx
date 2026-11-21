@@ -1,16 +1,32 @@
 import { useRef, type CSSProperties } from 'react';
-import { AlarmClock, AlertCircle, Brain, LoaderCircle, Pause, Play, Plus, Share2, Timer, Volume1, Volume2, VolumeX, X } from 'lucide-react';
+import {
+  AlarmClock,
+  AlertCircle,
+  Brain,
+  LoaderCircle,
+  Pause,
+  Play,
+  Plus,
+  Share2,
+  Sparkles,
+  Timer,
+  Volume1,
+  Volume2,
+  VolumeX,
+  X,
+} from 'lucide-react';
+import { categoryName, soundName, useI18n, type Key } from '../i18n';
 import type { Mixer } from '../state/useMixer';
 import type { Routines } from '../state/useRoutines';
 import type { RoutinesTab } from './RoutinesModal';
 import { Slider } from './Slider';
 
-const TIMER_OPTIONS: { label: string; minutes: number | null }[] = [
-  { label: 'Off', minutes: null },
-  { label: '15m', minutes: 15 },
-  { label: '30m', minutes: 30 },
-  { label: '1h', minutes: 60 },
-  { label: '2h', minutes: 120 },
+const TIMER_OPTIONS: { label: Key; minutes: number | null }[] = [
+  { label: 'timer.off', minutes: null },
+  { label: 'timer.15', minutes: 15 },
+  { label: 'timer.30', minutes: 30 },
+  { label: 'timer.60', minutes: 60 },
+  { label: 'timer.120', minutes: 120 },
 ];
 
 function formatRemaining(ms: number) {
@@ -33,15 +49,25 @@ interface Props {
 }
 
 export function MixerPanel({ mixer, onAddSound, onPickVideo, onNotify, routines, focusLabel, onOpenRoutines }: Props) {
+  const i18n = useI18n();
+  const { t, errorText } = i18n;
+
   const share = async () => {
     const url = mixer.shareUrl();
     try {
       await navigator.clipboard.writeText(url);
-      onNotify('Link copied — anyone who opens it gets this mix');
+      onNotify(t('mixer.shareCopied'));
     } catch {
-      window.prompt('Copy this link to share your mix:', url);
+      window.prompt(t('mixer.sharePrompt'), url);
     }
   };
+
+  const toggleNatural = () => {
+    const next = !mixer.natural;
+    mixer.setNatural(next);
+    if (next) onNotify(t('mixer.naturalOn'));
+  };
+
   const lastMaster = useRef(50);
   const { master, setMaster } = mixer;
   const MasterIcon = master === 0 ? VolumeX : master < 50 ? Volume1 : Volume2;
@@ -59,19 +85,19 @@ export function MixerPanel({ mixer, onAddSound, onPickVideo, onNotify, routines,
     <aside className="panel mixer">
       <div className="mixer-head">
         <h1>
-          Create Your
+          {t('mixer.title1')}
           <br />
-          Perfect Ambience
+          {t('mixer.title2')}
         </h1>
-        <p>Mix sounds. Match Moods. Stay In Flow.</p>
+        <p>{t('mixer.tagline')}</p>
       </div>
 
-      <div className="section-label">Master Volume</div>
+      <div className="section-label">{t('mixer.master')}</div>
       <div className="master-row">
-        <button className="icon-btn ghost" onClick={toggleMute} aria-label={master === 0 ? 'Unmute' : 'Mute'}>
+        <button className="icon-btn ghost" onClick={toggleMute} aria-label={master === 0 ? t('mixer.unmute') : t('mixer.mute')}>
           <MasterIcon size={17} />
         </button>
-        <Slider value={master} onChange={setMaster} label="Master volume" />
+        <Slider value={master} onChange={setMaster} label={t('mixer.masterAria')} />
         <span className="master-value">{master}%</span>
       </div>
 
@@ -79,10 +105,11 @@ export function MixerPanel({ mixer, onAddSound, onPickVideo, onNotify, routines,
         {mixer.active.map((entry) => {
           const sound = mixer.soundById.get(entry.id);
           if (!sound) return null;
+          const name = soundName(i18n, sound);
           const Icon = sound.icon;
           const channel = mixer.channels[entry.id];
           const busy = channel?.status === 'searching' || channel?.status === 'loading';
-          const error = channel?.status === 'error' ? channel.error : undefined;
+          const error = channel?.status === 'error' ? errorText(channel.error) : undefined;
           const video = mixer.videos[entry.id];
           return (
             <div className={`sound-row ${error ? 'has-error' : ''}`} key={entry.id}>
@@ -90,19 +117,19 @@ export function MixerPanel({ mixer, onAddSound, onPickVideo, onNotify, routines,
                 className="sound-icon"
                 style={{ '--hue': sound.color } as CSSProperties}
                 onClick={() => onPickVideo(entry.id)}
-                title={video ? `Source: ${video.title}\nClick to change` : 'Choose YouTube source'}
+                title={video ? t('mixer.source', { title: video.title }) : t('mixer.chooseSource')}
               >
                 <Icon size={18} />
                 {busy && mixer.playing && <LoaderCircle className="sound-spinner spin" size={40} strokeWidth={1.5} />}
               </button>
               <div className="sound-meta">
-                <div className="sound-name" title={sound.name}>
-                  {sound.name}
+                <div className="sound-name" title={name}>
+                  {name}
                 </div>
                 <div className="sound-cat">
                   {error ? (
                     <span className="sound-error" title={error}>
-                      <AlertCircle size={11} /> Error
+                      <AlertCircle size={11} /> {t('mixer.error')}
                     </span>
                   ) : video ? (
                     <a
@@ -110,54 +137,65 @@ export function MixerPanel({ mixer, onAddSound, onPickVideo, onNotify, routines,
                       href={`https://www.youtube.com/watch?v=${video.id}`}
                       target="_blank"
                       rel="noreferrer"
-                      title={`${video.title}${video.channel ? ` — ${video.channel}` : ''}\nOpen on YouTube`}
+                      title={`${video.title}${video.channel ? ` — ${video.channel}` : ''}\n${t('mixer.openYouTube')}`}
                     >
                       {[video.channel, video.title].filter(Boolean).join(' · ')}
                     </a>
                   ) : (
-                    sound.category
+                    categoryName(i18n, sound.category)
                   )}
                 </div>
               </div>
-              <Slider value={entry.volume} onChange={(v) => mixer.setSoundVolume(entry.id, v)} label={`${sound.name} volume`} />
-              <button className="icon-btn ghost" onClick={() => mixer.removeSound(entry.id)} aria-label={`Remove ${sound.name}`}>
+              <Slider
+                value={entry.volume}
+                onChange={(v) => mixer.setSoundVolume(entry.id, v)}
+                label={t('mixer.volumeAria', { name })}
+                live={mixer.driftLevel(entry.id)}
+              />
+              <button className="icon-btn ghost" onClick={() => mixer.removeSound(entry.id)} aria-label={t('mixer.remove', { name })}>
                 <X size={16} />
               </button>
             </div>
           );
         })}
 
-        {mixer.active.length === 0 && (
-          <div className="sound-empty">Pick a template or add sounds to start your mix.</div>
-        )}
+        {mixer.active.length === 0 && <div className="sound-empty">{t('mixer.empty')}</div>}
 
         <div className="mixer-actions">
           <button className="add-sound" onClick={onAddSound}>
-            <Plus size={16} /> Add sound
+            <Plus size={16} /> {t('mixer.add')}
           </button>
           {mixer.active.length > 0 && (
-            <button className="add-sound share" onClick={share} title="Copy a link to this mix">
-              <Share2 size={15} /> Share
+            <button className="add-sound share" onClick={share} title={t('mixer.shareTitle')}>
+              <Share2 size={15} /> {t('mixer.share')}
             </button>
           )}
         </div>
       </div>
 
       <div className="routine-bar">
+        <button
+          className={`chip small ${mixer.natural ? 'active' : ''}`}
+          onClick={toggleNatural}
+          title={t('mixer.naturalTitle')}
+          aria-pressed={mixer.natural}
+        >
+          <Sparkles size={13} /> {t('mixer.natural')}
+        </button>
         <button className={`chip small ${routines.run ? 'active' : ''}`} onClick={() => onOpenRoutines('focus')}>
-          <Brain size={13} /> {focusLabel ?? 'Focus timer'}
+          <Brain size={13} /> {focusLabel ?? t('mixer.focus')}
         </button>
         <button className={`chip small ${routines.alarm.enabled ? 'active' : ''}`} onClick={() => onOpenRoutines('alarm')}>
-          <AlarmClock size={13} /> {routines.alarm.enabled ? `Alarm ${routines.alarm.time}` : 'Alarm'}
+          <AlarmClock size={13} /> {routines.alarm.enabled ? t('mixer.alarmAt', { time: routines.alarm.time }) : t('mixer.alarm')}
         </button>
-        {mixer.fadingIn && <span className="routine-note">Fading in…</span>}
+        {mixer.fadingIn && <span className="routine-note">{t('mixer.fadingIn')}</span>}
       </div>
 
       <footer className="mixer-foot">
         <div className="timer">
           <div className="timer-head">
             <Timer size={14} />
-            <span>Sleep timer</span>
+            <span>{t('mixer.sleepTimer')}</span>
             {mixer.remaining !== null && <span className="timer-left">{formatRemaining(mixer.remaining)}</span>}
           </div>
           <div className="timer-options">
@@ -167,7 +205,7 @@ export function MixerPanel({ mixer, onAddSound, onPickVideo, onNotify, routines,
                 className={`chip small ${mixer.timerMinutes === o.minutes ? 'active' : ''}`}
                 onClick={() => mixer.startTimer(o.minutes)}
               >
-                {o.label}
+                {t(o.label)}
               </button>
             ))}
           </div>
@@ -176,7 +214,7 @@ export function MixerPanel({ mixer, onAddSound, onPickVideo, onNotify, routines,
           className="play-btn"
           onClick={() => mixer.setPlaying((p) => !p)}
           disabled={mixer.active.length === 0}
-          aria-label={mixer.playing ? 'Pause all' : 'Play all'}
+          aria-label={mixer.playing ? t('mixer.pauseAll') : t('mixer.playAll')}
         >
           {mixer.playing ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />}
         </button>

@@ -1,5 +1,6 @@
 import { Check, ExternalLink } from 'lucide-react';
 import type { VideoResult } from '../lib/youtube';
+import { useI18n } from '../i18n';
 import { watchUrl } from '../lib/youtube';
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function YouTubeResults({ results, selectedId, actionLabel, isDone, onPick }: Props) {
+  const { t } = useI18n();
   return (
     <ul className="yt-results">
       {results.map((v) => {
@@ -24,7 +26,7 @@ export function YouTubeResults({ results, selectedId, actionLabel, isDone, onPic
               </div>
               <div className="yt-channel-name">
                 {v.channel}
-                <a href={watchUrl(v.id)} target="_blank" rel="noreferrer" aria-label="Open on YouTube">
+                <a href={watchUrl(v.id)} target="_blank" rel="noreferrer" aria-label={t('yt.openAria')}>
                   <ExternalLink size={12} />
                 </a>
               </div>

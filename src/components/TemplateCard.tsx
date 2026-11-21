@@ -2,6 +2,7 @@ import { useEffect, useState, type CSSProperties } from 'react';
 import { AudioLines, Pause, Play, Trash2 } from 'lucide-react';
 import type { SoundDef } from '../data/sounds';
 import type { Template } from '../data/templates';
+import { soundName, templateDesc, templateTitle, useI18n } from '../i18n';
 import { searchVideos } from '../lib/youtube';
 import { Thumb } from './Thumb';
 
@@ -30,6 +31,10 @@ interface Props {
 }
 
 export function TemplateCard({ template, soundById, active, playing, onApply, onDelete }: Props) {
+  const i18n = useI18n();
+  const { t } = i18n;
+  const title = templateTitle(i18n, template);
+  const description = templateDesc(i18n, template);
   const cover = useCoverVideo(template);
   const firstSound = soundById.get(template.sounds[0]?.id ?? '');
   const FallbackIcon = firstSound?.icon ?? AudioLines;
@@ -47,7 +52,7 @@ export function TemplateCard({ template, soundById, active, playing, onApply, on
         }
       }}
       aria-pressed={active}
-      aria-label={`${template.title}: ${template.description}`}
+      aria-label={`${title}: ${description}`}
     >
       <div className="tcard-media" style={{ '--hue': firstSound?.color ?? '#8b5cf6' } as CSSProperties}>
         {cover ? <Thumb videoId={cover} className="tcard-img" /> : <FallbackIcon className="tcard-fallback" size={48} strokeWidth={1.2} />}
@@ -58,13 +63,13 @@ export function TemplateCard({ template, soundById, active, playing, onApply, on
 
       {active && (
         <span className="tcard-badge">
-          <AudioLines size={12} className={playing ? 'pulse' : ''} /> {playing ? 'Playing' : 'Paused'}
+          <AudioLines size={12} className={playing ? 'pulse' : ''} /> {playing ? t('card.playing') : t('card.paused')}
         </span>
       )}
       {template.custom && onDelete && (
         <button
           className="tcard-delete"
-          aria-label={`Delete ${template.title}`}
+          aria-label={t('card.delete', { title })}
           onClick={(e) => {
             e.stopPropagation();
             onDelete();
@@ -75,14 +80,14 @@ export function TemplateCard({ template, soundById, active, playing, onApply, on
       )}
 
       <div className="tcard-body">
-        <h3>{template.title}</h3>
-        <p>{template.description}</p>
+        <h3>{title}</h3>
+        <p>{description}</p>
         <div className="tcard-icons">
           {template.sounds.map((s) => {
             const sound = soundById.get(s.id);
             if (!sound) return null;
             const Icon = sound.icon;
-            return <Icon key={s.id} size={16} aria-label={sound.name} />;
+            return <Icon key={s.id} size={16} aria-label={soundName(i18n, sound)} />;
           })}
         </div>
       </div>

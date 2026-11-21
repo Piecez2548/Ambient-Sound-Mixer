@@ -13,7 +13,8 @@ export function useYouTubeSearch() {
     try {
       setResults(await searchVideos(query, { duration, maxResults: 15 }));
     } catch (e) {
-      setError((e as Error).message);
+      // A code (network, quotaExceeded…) when known; the UI translates it.
+      setError((e as { reason?: string }).reason ?? (e as Error).message);
       setResults([]);
     } finally {
       setLoading(false);

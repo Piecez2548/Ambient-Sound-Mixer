@@ -3,7 +3,7 @@ import { DEFAULT_MIX, SOUNDS, customToDef, type CustomSound, type SoundDef } fro
 import { TEMPLATES, type MixEntry, type Template } from '../data/templates';
 import { buildShareUrl, type SharedMix } from '../lib/share';
 import { usePersistentState } from '../lib/storage';
-import { searchVideos, thumbUrl, type VideoResult } from '../lib/youtube';
+import { searchVideos, thumbUrl, type VideoResult, type YouTubeError } from '../lib/youtube';
 import type { PlayerStatus } from '../components/YouTubeChannel';
 
 export type ChannelStatus = PlayerStatus | 'searching' | 'error';
@@ -13,6 +13,28 @@ export interface ChannelState {
 }
 
 const FADE_MS = 30_000;
+
+// "Natural variation": each sound's volume drifts below its set level along two
+// slow sine waves with periods/phases seeded by the sound id, so every sound
+// breathes on its own cycle and the mix never sounds static.
+const DRIFT_DEPTH: Record<string, number> = { thunder: 0.7, wind: 0.6, waves: 0.5, rain: 0.4, 'tin-roof': 0.4, birds: 0.5 };
+const DEFAULT_DEPTH = 0.35;
+function hash(s: string) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+export function driftFactor(id: string, t: number) {
+  const h = hash(id);
+  const slow = 40 + (h % 41); // 40–80 s
+  const fast = 11 + ((h >>> 8) % 15); // 11–25 s
+  const p1 = ((h >>> 16) % 628) / 100;
+  const p2 = ((h >>> 4) % 628) / 100;
+  const s = t / 1000;
+  const wave = 0.65 * Math.sin((2 * Math.PI * s) / slow + p1) + 0.35 * Math.sin((2 * Math.PI * s) / fast + p2); // −1…1
+  const depth = DRIFT_DEPTH[id] ?? DEFAULT_DEPTH;
+  return 1 - depth * (0.5 + 0.5 * wave);
+}
 
 const shortName = (title: string) => (title.length > 28 ? `${title.slice(0, 26)}…` : title);
 const makeVideo = (id: string, title: string): VideoResult => ({ id, title, channel: '', thumbnail: thumbUrl(id) });
@@ -24,6 +46,7 @@ export function useMixer() {
   const [customSounds, setCustomSounds] = usePersistentState<CustomSound[]>('asm:customSounds', []);
   const [customTemplates, setCustomTemplates] = usePersistentState<Template[]>('asm:customTemplates', []);
   const [templateId, setTemplateId] = usePersistentState<string | null>('asm:template', null);
+  const [natural, setNatural] = usePersistentState('asm:natural', false);
   const [playing, setPlaying] = useState(false);
   const [channels, setChannels] = useState<Record<string, ChannelState>>({});
   const [timerEnd, setTimerEnd] = useState<number | null>(null);
@@ -52,7 +75,7 @@ export function useMixer() {
       const bad = failed.current.get(entry.id);
 
       if (sound.video) {
-        if (bad?.has(sound.video.id)) setChannel(entry.id, { status: 'error', error: 'Video can’t be embedded' });
+        if (bad?.has(sound.video.id)) setChannel(entry.id, { status: 'error', error: 'embed' });
         else setVideos((v) => ({ ...v, [entry.id]: sound.video! }));
         continue;
       }
@@ -70,9 +93,10 @@ export function useMixer() {
         .then((list) => {
           const pick = list.find((v) => !bad?.has(v.id));
           if (pick) setVideos((v) => ({ ...v, [entry.id]: pick }));
-          else setChannel(entry.id, { status: 'error', error: 'No playable video' });
+          else setChannel(entry.id, { status: 'error', error: 'noVideo' });
         })
-        .catch((err: Error) => setChannel(entry.id, { status: 'error', error: err.message }))
+        // Error codes (embed, noVideo, network, quotaExceeded…) are translated by the UI.
+        .catch((err: YouTubeError) => setChannel(entry.id, { status: 'error', error: err.reason ?? err.message }))
         .finally(() => resolving.current.delete(entry.id));
     }
   }, [active, videos, soundById, setChannel]);
@@ -96,11 +120,13 @@ export function useMixer() {
   }, [setVideos]);
 
   // Sleep timer with a 30 s fade-out; also drives the fade-in ramp.
+  const drifting = natural && playing;
   useEffect(() => {
-    if (!timerEnd && !fadeIn) return;
+    if (!timerEnd && !fadeIn && !drifting) return;
+    setNow(Date.now());
     const t = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(t);
-  }, [timerEnd, fadeIn]);
+  }, [timerEnd, fadeIn, drifting]);
 
   const fadeInFactor = fadeIn ? Math.min(1, Math.max(0, (now - fadeIn.start) / (fadeIn.end - fadeIn.start))) : 1;
   useEffect(() => {
@@ -134,8 +160,11 @@ export function useMixer() {
   }, []);
 
   const effectiveVolume = useCallback(
-    (volume: number) => Math.round((volume * master * fade * fadeInFactor) / 100),
-    [master, fade, fadeInFactor],
+    (volume: number, soundId?: string) => {
+      const drift = drifting && soundId ? driftFactor(soundId, now) : 1;
+      return Math.round((volume * master * fade * fadeInFactor * drift) / 100);
+    },
+    [master, fade, fadeInFactor, drifting, now],
   );
 
   const addSound = useCallback((id: string, volume = 50) => {
@@ -285,6 +314,10 @@ export function useMixer() {
     loadTemplate,
     playWithFadeIn,
     fadingIn: fadeIn !== null,
+    natural,
+    setNatural,
+    /** Current natural-variation level for a sound (0–1), for the UI. */
+    driftLevel: (soundId: string) => (drifting ? driftFactor(soundId, now) : 1),
   };
 }
 

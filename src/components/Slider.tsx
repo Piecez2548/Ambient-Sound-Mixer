@@ -6,10 +6,14 @@ interface Props {
   label: string;
   min?: number;
   max?: number;
+  /** 0–1: current live level as a share of `value` (natural variation); shown as a brighter part of the fill. */
+  live?: number;
 }
 
-export function Slider({ value, onChange, label, min = 0, max = 100 }: Props) {
+export function Slider({ value, onChange, label, min = 0, max = 100, live }: Props) {
   const fill = ((value - min) / (max - min)) * 100;
+  const style = { '--fill': `${fill}%` } as Record<string, string>;
+  if (live !== undefined && live < 1) style['--live'] = `${fill * live}%`;
   return (
     <input
       type="range"
@@ -19,7 +23,7 @@ export function Slider({ value, onChange, label, min = 0, max = 100 }: Props) {
       value={value}
       aria-label={label}
       onChange={(e) => onChange(Number(e.target.value))}
-      style={{ '--fill': `${fill}%` } as CSSProperties}
+      style={style as CSSProperties}
     />
   );
 }

@@ -1,6 +1,7 @@
 // Wake-up alarm and Pomodoro focus timer, built on top of the mixer.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePersistentState } from '../lib/storage';
+import type { T } from '../i18n';
 import type { Mixer } from './useMixer';
 
 export interface AlarmSettings {
@@ -92,7 +93,9 @@ export function requestNotifications() {
   }
 }
 
-export function useRoutines(mixer: Mixer) {
+export function useRoutines(mixer: Mixer, t: T) {
+  const tRef = useRef(t);
+  tRef.current = t;
   const [alarm, setAlarmState] = usePersistentState<AlarmSettings>('asm:alarm', DEFAULT_ALARM);
   const setAlarm = useCallback(
     (patch: Partial<AlarmSettings>) => setAlarmState((a) => ({ ...a, ...patch, armedAt: Date.now() })),
@@ -130,7 +133,7 @@ export function useRoutines(mixer: Mixer) {
     setLastRang(dayKey(d));
     playTemplate(alarm.templateId);
     mixerRef.current.playWithFadeIn(alarm.fadeMinutes);
-    notify('Good morning', 'Your ambience is fading in.');
+    notify(tRef.current('notify.morning'), tRef.current('notify.morningBody'));
     if (!alarm.daily) setAlarmState((a) => ({ ...a, enabled: false }));
   }, [now, alarm, lastRang, setLastRang, setAlarmState, playTemplate]);
 
@@ -145,7 +148,8 @@ export function useRoutines(mixer: Mixer) {
     playTemplate(toBreak ? focus.breakTemplateId : focus.focusTemplateId);
     mixerRef.current.setPlaying(true);
     chime(toBreak ? [880, 660] : [660, 880]);
-    notify(toBreak ? 'Time for a break' : 'Back to focus', `${minutes} minutes${toBreak ? ' — stretch, breathe, look away from the screen.' : '.'}`);
+    const tt = tRef.current;
+    notify(tt(toBreak ? 'notify.break' : 'notify.focus'), tt(toBreak ? 'notify.breakBody' : 'notify.focusBody', { n: minutes }));
   }, [now, run, focus, playTemplate]);
 
   const startFocus = useCallback(() => {

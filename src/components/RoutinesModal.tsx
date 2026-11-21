@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { AlarmClock, Brain, Coffee, SkipForward, Square } from 'lucide-react';
+import { templateTitle, useI18n } from '../i18n';
 import type { Mixer } from '../state/useMixer';
 import { nextAlarm, requestNotifications, type Routines } from '../state/useRoutines';
 import { Modal } from './Modal';
@@ -23,14 +24,15 @@ export function formatClock(ms: number) {
 const isElectron = Boolean((window as any).ambient?.isElectron);
 
 export function RoutinesModal({ mixer, routines, initialTab, onClose }: Props) {
+  const { t } = useI18n();
   const [tab, setTab] = useState<RoutinesTab>(initialTab);
   return (
-    <Modal title="Alarm & Focus" subtitle="Let your ambience follow your day." onClose={onClose}>
+    <Modal title={t('rt.title')} subtitle={t('rt.subtitle')} onClose={onClose}>
       <div className="tabs" role="tablist">
         {(
           [
-            ['focus', 'Focus timer'],
-            ['alarm', 'Wake-up alarm'],
+            ['focus', t('rt.tabFocus')],
+            ['alarm', t('rt.tabAlarm')],
           ] as const
         ).map(([id, label]) => (
           <button key={id} role="tab" aria-selected={tab === id} className={`tab ${tab === id ? 'active' : ''}`} onClick={() => setTab(id)}>
@@ -44,12 +46,13 @@ export function RoutinesModal({ mixer, routines, initialTab, onClose }: Props) {
 }
 
 function TemplateSelect({ mixer, value, onChange, label }: { mixer: Mixer; value: string | null; onChange: (id: string | null) => void; label: string }) {
+  const i18n = useI18n();
   return (
     <select className="select" value={value ?? ''} onChange={(e) => onChange(e.target.value || null)} aria-label={label}>
-      <option value="">Keep the current mix</option>
-      {mixer.templates.map((t) => (
-        <option key={t.id} value={t.id}>
-          {t.title}
+      <option value="">{i18n.t('rt.keepMix')}</option>
+      {mixer.templates.map((tpl) => (
+        <option key={tpl.id} value={tpl.id}>
+          {templateTitle(i18n, tpl)}
         </option>
       ))}
     </select>
@@ -66,6 +69,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 }
 
 function MinutesInput({ value, onChange, min, max, label }: { value: number; onChange: (n: number) => void; min: number; max: number; label: string }) {
+  const { t } = useI18n();
   return (
     <span className="minutes">
       <input
@@ -79,12 +83,13 @@ function MinutesInput({ value, onChange, min, max, label }: { value: number; onC
           if (Number.isFinite(n)) onChange(Math.min(max, Math.max(min, n)));
         }}
       />
-      min
+      {t('rt.min')}
     </span>
   );
 }
 
 function FocusTab({ mixer, routines }: { mixer: Mixer; routines: Routines }) {
+  const { t } = useI18n();
   const { focus, setFocus, run, focusRemaining } = routines;
   const set = (patch: Partial<typeof focus>) => setFocus((f) => ({ ...f, ...patch }));
 
@@ -94,35 +99,35 @@ function FocusTab({ mixer, routines }: { mixer: Mixer; routines: Routines }) {
         <div className={`focus-live ${run.phase}`}>
           <div className="focus-phase">
             {run.phase === 'focus' ? <Brain size={16} /> : <Coffee size={16} />}
-            {run.phase === 'focus' ? 'Focus' : 'Break'}
-            <span className="focus-count">{run.done} done</span>
+            {run.phase === 'focus' ? t('rt.focus') : t('rt.break')}
+            <span className="focus-count">{t('rt.done', { n: run.done })}</span>
           </div>
           <div className="focus-clock">{formatClock(focusRemaining)}</div>
           <div className="focus-actions">
             <button className="btn-outline" onClick={routines.skipPhase}>
-              <SkipForward size={15} /> {run.phase === 'focus' ? 'Start break' : 'Start focus'}
+              <SkipForward size={15} /> {run.phase === 'focus' ? t('rt.startBreak') : t('rt.startFocus')}
             </button>
             <button className="btn-outline" onClick={routines.stopFocus}>
-              <Square size={14} /> Stop
+              <Square size={14} /> {t('rt.stop')}
             </button>
           </div>
         </div>
       ) : (
-        <p className="hint">Work in focused blocks with short breaks. The mix switches automatically and a soft chime marks each change.</p>
+        <p className="hint">{t('rt.focusHint')}</p>
       )}
 
-      <Row label="Focus">
-        <MinutesInput value={focus.focusMinutes} min={1} max={180} onChange={(n) => set({ focusMinutes: n })} label="Focus minutes" />
-        <TemplateSelect mixer={mixer} value={focus.focusTemplateId} onChange={(id) => set({ focusTemplateId: id })} label="Focus mix" />
+      <Row label={t('rt.focus')}>
+        <MinutesInput value={focus.focusMinutes} min={1} max={180} onChange={(n) => set({ focusMinutes: n })} label={t('rt.focusMinAria')} />
+        <TemplateSelect mixer={mixer} value={focus.focusTemplateId} onChange={(id) => set({ focusTemplateId: id })} label={t('rt.focusMixAria')} />
       </Row>
-      <Row label="Break">
-        <MinutesInput value={focus.breakMinutes} min={1} max={60} onChange={(n) => set({ breakMinutes: n })} label="Break minutes" />
-        <TemplateSelect mixer={mixer} value={focus.breakTemplateId} onChange={(id) => set({ breakTemplateId: id })} label="Break mix" />
+      <Row label={t('rt.break')}>
+        <MinutesInput value={focus.breakMinutes} min={1} max={60} onChange={(n) => set({ breakMinutes: n })} label={t('rt.breakMinAria')} />
+        <TemplateSelect mixer={mixer} value={focus.breakTemplateId} onChange={(id) => set({ breakTemplateId: id })} label={t('rt.breakMixAria')} />
       </Row>
 
       {!run && (
         <button className="btn-primary routine-go" onClick={routines.startFocus}>
-          <Brain size={16} /> Start focusing
+          <Brain size={16} /> {t('rt.go')}
         </button>
       )}
     </div>
@@ -130,40 +135,37 @@ function FocusTab({ mixer, routines }: { mixer: Mixer; routines: Routines }) {
 }
 
 function AlarmTab({ mixer, routines }: { mixer: Mixer; routines: Routines }) {
+  const { t, locale, lang } = useI18n();
   const { alarm, setAlarm } = routines;
   const next = nextAlarm(alarm.time);
-  const inHours = (next.getTime() - Date.now()) / 3_600_000;
-  const when = `${next.toLocaleDateString(undefined, { weekday: 'long' })} ${alarm.time}`;
+  const minutesLeft = Math.max(1, Math.round((next.getTime() - Date.now()) / 60_000));
+  const inText = minutesLeft >= 60 ? t('rt.inHM', { h: Math.floor(minutesLeft / 60), m: minutesLeft % 60 }) : t('rt.inM', { m: minutesLeft });
+  const weekday = next.toLocaleDateString(locale, { weekday: 'long' });
+  const when = lang === 'th' ? `${weekday} ${alarm.time} น.` : `${weekday} ${alarm.time}`;
 
   return (
     <div className="routine">
       <div className={`alarm-status ${alarm.enabled ? 'on' : ''}`}>
         <AlarmClock size={18} />
-        {alarm.enabled ? (
-          <span>
-            Rings <strong>{when}</strong> — in {inHours >= 1 ? `${Math.floor(inHours)} h ${Math.round((inHours % 1) * 60)} min` : `${Math.max(1, Math.round(inHours * 60))} min`}
-          </span>
-        ) : (
-          <span>Alarm is off</span>
-        )}
+        {alarm.enabled ? <span>{t('rt.rings', { when, in: inText })}</span> : <span>{t('rt.off')}</span>}
       </div>
 
-      <Row label="Time">
-        <input className="time-input" type="time" value={alarm.time} onChange={(e) => e.target.value && setAlarm({ time: e.target.value })} aria-label="Alarm time" />
+      <Row label={t('rt.time')}>
+        <input className="time-input" type="time" value={alarm.time} onChange={(e) => e.target.value && setAlarm({ time: e.target.value })} aria-label={t('rt.timeAria')} />
       </Row>
-      <Row label="Fade in">
-        <MinutesInput value={alarm.fadeMinutes} min={0} max={60} onChange={(n) => setAlarm({ fadeMinutes: n })} label="Fade-in minutes" />
+      <Row label={t('rt.fadeIn')}>
+        <MinutesInput value={alarm.fadeMinutes} min={0} max={60} onChange={(n) => setAlarm({ fadeMinutes: n })} label={t('rt.fadeAria')} />
       </Row>
-      <Row label="Play">
-        <TemplateSelect mixer={mixer} value={alarm.templateId} onChange={(id) => setAlarm({ templateId: id })} label="Alarm mix" />
+      <Row label={t('rt.play')}>
+        <TemplateSelect mixer={mixer} value={alarm.templateId} onChange={(id) => setAlarm({ templateId: id })} label={t('rt.mixAria')} />
       </Row>
-      <Row label="Repeat">
+      <Row label={t('rt.repeat')}>
         <span className="chips">
           <button type="button" className={`chip small ${alarm.daily ? 'active' : ''}`} onClick={() => setAlarm({ daily: true })}>
-            Every day
+            {t('rt.daily')}
           </button>
           <button type="button" className={`chip small ${!alarm.daily ? 'active' : ''}`} onClick={() => setAlarm({ daily: false })}>
-            Once
+            {t('rt.once')}
           </button>
         </span>
       </Row>
@@ -175,13 +177,9 @@ function AlarmTab({ mixer, routines }: { mixer: Mixer; routines: Routines }) {
           setAlarm({ enabled: !alarm.enabled });
         }}
       >
-        <AlarmClock size={16} /> {alarm.enabled ? 'Turn alarm off' : 'Turn alarm on'}
+        <AlarmClock size={16} /> {alarm.enabled ? t('rt.turnOff') : t('rt.turnOn')}
       </button>
-      <p className="hint">
-        {isElectron
-          ? 'Keep the app running (the tray is fine) and the computer awake — a sleeping PC can’t ring.'
-          : 'Keep this tab open and the device awake. For a reliable alarm, use the Windows app.'}
-      </p>
+      <p className="hint">{isElectron ? t('rt.hintApp') : t('rt.hintWeb')}</p>
     </div>
   );
 }
