@@ -38,7 +38,7 @@ You don't need an API key locally: the app calls the search API on the productio
 ### Windows app (Electron)
 
 - Loads the app through a local server at `http://127.0.0.1:47821` instead of `file://`, because YouTube embeds won't play without a Referer.
-- Closing the window keeps it running in the system tray, so sounds keep playing. The tray menu has Play/Pause, **Start with Windows** (starts hidden in the tray), and Quit.
+- The first time you close the window it asks: **Keep playing in tray** (sounds continue from the tray icon) or **Quit**. The answer is remembered (`closeAction` in `settings.json` in the app's userData folder). Change it from the tray menu's *Keep playing when the window is closed* checkbox. The tray menu also has Play/Pause, **Start with Windows** (starts hidden in the tray), and Quit.
 - **Ctrl+Alt+P** toggles play/pause from anywhere, even while the window is hidden. If another app already uses that shortcut, it's skipped silently.
 - Checks GitHub Releases on startup and installs updates automatically (`electron-updater`).
 - The installer isn't code-signed, so Windows SmartScreen shows "Windows protected your PC" the first time: click **More info → Run anyway**.

@@ -1,7 +1,7 @@
 // Electron shell. In dev it loads the Vite server; in production it serves dist/
 // over a local http server, because YouTube embeds refuse to play from file://
 // (no Referer -> error 153).
-const { app, BrowserWindow, Menu, Tray, globalShortcut, ipcMain, nativeImage, shell } = require('electron');
+const { app, BrowserWindow, Menu, Tray, dialog, globalShortcut, ipcMain, nativeImage, shell } = require('electron');
 const path = require('node:path');
 const http = require('node:http');
 const fs = require('node:fs');
@@ -100,6 +100,38 @@ function togglePlay() {
   else showWindow();
 }
 
+function quitApp() {
+  isQuitting = true;
+  app.quit();
+}
+
+let asking = false;
+async function askCloseAction() {
+  if (asking || !win || win.isDestroyed()) return;
+  asking = true;
+  try {
+    const { response } = await dialog.showMessageBox(win, {
+      type: 'question',
+      title: 'Ambient Sound Mixer',
+      message: 'Keep playing after closing the window?',
+      detail:
+        'Keep playing: the window closes but sounds continue from the tray icon next to the clock. Right-click it to pause or quit.\n\nQuit: closing the window stops everything.\n\nYour choice is remembered. Change it any time from the tray menu.',
+      buttons: ['Keep playing in tray', 'Quit', 'Cancel'],
+      defaultId: 0,
+      cancelId: 2,
+      noLink: true,
+    });
+    if (response === 2) return;
+    const action = response === 0 ? 'tray' : 'quit';
+    writeSettings({ closeAction: action });
+    buildTrayMenu();
+    if (action === 'quit') quitApp();
+    else win.hide();
+  } finally {
+    asking = false;
+  }
+}
+
 function isOpenAtLogin() {
   return app.getLoginItemSettings({ args: ['--hidden'] }).openAtLogin;
 }
@@ -126,14 +158,17 @@ function buildTrayMenu() {
           buildTrayMenu();
         },
       },
-      { type: 'separator' },
       {
-        label: 'Quit',
-        click: () => {
-          isQuitting = true;
-          app.quit();
+        label: 'Keep playing when the window is closed',
+        type: 'checkbox',
+        checked: readSettings().closeAction === 'tray',
+        click: (item) => {
+          writeSettings({ closeAction: item.checked ? 'tray' : 'quit' });
+          buildTrayMenu();
         },
       },
+      { type: 'separator' },
+      { label: 'Quit', click: quitApp },
     ]),
   );
 }
@@ -177,19 +212,16 @@ async function createWindow() {
     return { action: 'deny' };
   });
 
-  // Closing the window hides it to the tray so the sounds keep playing.
+  // X button: the first time, ask whether to keep playing in the tray or quit,
+  // and remember the answer (changeable from the tray menu).
   win.on('close', (event) => {
     if (isQuitting) return;
     event.preventDefault();
-    win.hide();
-    if (!readSettings().trayHintShown && tray) {
-      tray.displayBalloon({
-        iconType: 'info',
-        title: 'Still playing in the tray',
-        content: 'Ambient Sound Mixer keeps running here. Right-click the tray icon to quit.',
-      });
-      writeSettings({ trayHintShown: true });
-    }
+    const action = readSettings().closeAction;
+    // Quit on the next tick: quitting from inside this (cancelled) close event is ignored.
+    if (action === 'quit') return setImmediate(quitApp);
+    if (action === 'tray') return win.hide();
+    askCloseAction();
   });
 
   win.on('closed', () => {
