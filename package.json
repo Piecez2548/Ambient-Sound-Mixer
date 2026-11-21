@@ -13,7 +13,8 @@
     "preview": "vite preview",
     "electron:dev": "concurrently -k -n vite,electron \"vite --port 5173 --strictPort\" \"wait-on tcp:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
     "electron": "npm run build && electron .",
-    "dist": "npm run build && electron-builder --win --publish never"
+    "dist": "npm run build && electron-builder --win --publish never",
+    "check:videos": "node scripts/check-videos.mjs"
   },
   "build": {
     "appId": "local.ambient-sound-mixer",

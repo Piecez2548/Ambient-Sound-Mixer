@@ -43,6 +43,12 @@ You don't need an API key locally: the app calls the search API on the productio
 - Checks GitHub Releases on startup and installs updates automatically (`electron-updater`).
 - The installer isn't code-signed, so Windows SmartScreen shows "Windows protected your PC" the first time: click **More info → Run anyway**.
 
+## Checking the built-in videos
+
+YouTube videos disappear or get embedding turned off. `npm run check:videos` checks every built-in sound video and template cover without an API key: oEmbed for existence and embedding, plus the watch page's player status for sound videos. It exits 1 if anything is broken.
+
+The **Check built-in videos** GitHub workflow runs it every Monday at 02:00 UTC, whenever the data files change, and on demand from the Actions tab. If something breaks, it opens an issue labelled `broken-video`, which GitHub emails to you. It updates that issue on later runs and closes it once everything works again.
+
 ## Releasing a new version
 
 1. Bump `version` in `package.json`.

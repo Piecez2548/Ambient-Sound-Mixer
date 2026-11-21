@@ -1,0 +1,69 @@
+# Weekly check that every built-in YouTube video still plays.
+# Broken videos open (or update) an issue labelled "broken-video", which
+# GitHub emails to the repo owner; the issue closes itself once they're fixed.
+name: Check built-in videos
+
+on:
+  schedule:
+    - cron: '0 2 * * 1' # Mondays 02:00 UTC (09:00 in Thailand)
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - src/data/sounds.ts
+      - src/data/templates.ts
+      - scripts/check-videos.mjs
+      - .github/workflows/check-videos.yml
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: check-videos
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check videos
+        id: check
+        # Exit 1 = broken videos (handled below); exit 2 = the check itself failed.
+        run: |
+          set +e
+          node scripts/check-videos.mjs --report report.md
+          code=$?
+          if [ "$code" -ge 2 ]; then exit "$code"; fi
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open or update the issue
+        if: steps.check.outputs.broken != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create broken-video --color d73a4a --description "A built-in YouTube video stopped working" --force
+          issue=$(gh issue list --label broken-video --state open --json number --jq '.[0].number')
+          if [ -n "$issue" ]; then
+            gh issue edit "$issue" --body-file report.md
+            gh issue comment "$issue" --body "Still broken as of $(date -u +%F). Details are in the issue description."
+          else
+            gh issue create --title "Built-in YouTube video stopped working" --label broken-video --body-file report.md
+          fi
+
+      - name: Close the issue when everything works again
+        if: steps.check.outputs.broken == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          issue=$(gh issue list --label broken-video --state open --json number --jq '.[0].number' 2>/dev/null || true)
+          if [ -n "$issue" ]; then
+            gh issue close "$issue" --comment "All built-in videos work again ($(date -u +%F))."
+          fi
