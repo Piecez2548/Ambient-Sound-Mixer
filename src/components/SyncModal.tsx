@@ -3,6 +3,7 @@ import { Copy, Link, LoaderCircle, RefreshCw, ShieldCheck, Trash2, Unlink } from
 import QRCode from 'qrcode';
 import { useI18n, type Key } from '../i18n';
 import { formatCode, normalizeCode, syncLink } from '../lib/sync';
+import { APP_VERSION, IS_APP } from '../lib/version';
 import type { Sync } from '../state/useSync';
 import { Modal } from './Modal';
 
@@ -29,6 +30,9 @@ export function SyncModal({ sync, onClose, onNotify }: Props) {
       )}
       <p className="hint sync-privacy">
         <ShieldCheck size={13} /> {t('sync.privacy')}
+      </p>
+      <p className="hint about-version">
+        {t('about.version', { kind: IS_APP ? t('about.kindApp') : t('about.kindWeb'), v: APP_VERSION })}
       </p>
     </Modal>
   );

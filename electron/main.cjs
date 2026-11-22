@@ -104,6 +104,7 @@ const TEXT = {
     keepPlaying: 'Keep playing when the window is closed',
     quit: 'Quit',
     updateReady: 'Restart to update to v{v}',
+    version: 'Version {v}',
     tooltipPlaying: 'Ambient Sound Mixer — playing',
     askMessage: 'Keep playing after closing the window?',
     askDetail:
@@ -120,6 +121,7 @@ const TEXT = {
     keepPlaying: 'เล่นต่อเมื่อปิดหน้าต่าง',
     quit: 'ออกจากแอป',
     updateReady: 'รีสตาร์ทเพื่ออัปเดตเป็น v{v}',
+    version: 'เวอร์ชัน {v}',
     tooltipPlaying: 'Ambient Sound Mixer — กำลังเล่น',
     askMessage: 'เล่นเสียงต่อหลังปิดหน้าต่างไหม?',
     askDetail:
@@ -225,6 +227,7 @@ function buildTrayMenu() {
         },
       },
       { type: 'separator' },
+      { label: tx.version.replace('{v}', app.getVersion()), enabled: false },
       { label: tx.quit, click: quitApp },
     ]),
   );

@@ -2,6 +2,7 @@ import { AudioLines, Cloud, CloudAlert, CloudCheck, Download, RefreshCw } from '
 import { LANGS, useI18n } from '../i18n';
 import type { UpdateState } from '../state/useUpdate';
 import type { Sync } from '../state/useSync';
+import { APP_VERSION } from '../lib/version';
 import { syncErrorKey } from './SyncModal';
 
 const isElectron = Boolean((window as any).ambient?.isElectron);
@@ -25,7 +26,7 @@ export function TitleBar({ playing, count, extra, sync, onOpenSync, update }: Pr
 
   return (
     <div className={`titlebar ${isElectron ? 'is-electron' : ''}`}>
-      <div className="brand">
+      <div className="brand" title={t('about.title', { v: APP_VERSION })}>
         <span className="brand-mark">
           <AudioLines size={15} />
         </span>

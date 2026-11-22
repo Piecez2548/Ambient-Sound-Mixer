@@ -153,6 +153,11 @@ const en = {
   'notify.focus': 'Back to focus',
   'notify.focusBody': '{n} minutes.',
 
+  'about.version': 'Ambient Sound Mixer {kind} v{v}',
+  'about.kindApp': 'Windows app',
+  'about.kindWeb': 'web',
+  'about.title': 'Version {v}',
+
   // App updates (Windows app)
   'update.button': 'Update ready',
   'update.title': 'Version {v} is downloaded. Click to restart and install it — sound stops for a few seconds.',
@@ -387,6 +392,11 @@ const th: Record<Key, string> = {
   'notify.breakBody': '{n} นาที ยืดเส้นยืดสาย หายใจลึกๆ พักสายตาจากจอ',
   'notify.focus': 'กลับมาโฟกัส',
   'notify.focusBody': '{n} นาที',
+
+  'about.version': 'Ambient Sound Mixer {kind} v{v}',
+  'about.kindApp': 'แอป Windows',
+  'about.kindWeb': 'เว็บ',
+  'about.title': 'เวอร์ชัน {v}',
 
   'update.button': 'อัปเดตพร้อมแล้ว',
   'update.title': 'ดาวน์โหลดเวอร์ชัน {v} เสร็จแล้ว กดเพื่อรีสตาร์ทและติดตั้ง เสียงจะหยุดไปไม่กี่วินาที',

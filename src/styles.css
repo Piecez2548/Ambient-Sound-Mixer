@@ -442,6 +442,10 @@ a {
 .sync-status.error {
   color: var(--danger);
 }
+.about-version {
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
 .sync-privacy {
   display: flex;
   align-items: center;
