@@ -103,6 +103,7 @@ const TEXT = {
     startWithWindows: 'Start with Windows',
     keepPlaying: 'Keep playing when the window is closed',
     quit: 'Quit',
+    updateReady: 'Restart to update to v{v}',
     tooltipPlaying: 'Ambient Sound Mixer — playing',
     askMessage: 'Keep playing after closing the window?',
     askDetail:
@@ -118,6 +119,7 @@ const TEXT = {
     startWithWindows: 'เปิดพร้อม Windows',
     keepPlaying: 'เล่นต่อเมื่อปิดหน้าต่าง',
     quit: 'ออกจากแอป',
+    updateReady: 'รีสตาร์ทเพื่ออัปเดตเป็น v{v}',
     tooltipPlaying: 'Ambient Sound Mixer — กำลังเล่น',
     askMessage: 'เล่นเสียงต่อหลังปิดหน้าต่างไหม?',
     askDetail:
@@ -193,6 +195,9 @@ function buildTrayMenu() {
   tray.setToolTip(isPlaying ? tx.tooltipPlaying : 'Ambient Sound Mixer');
   tray.setContextMenu(
     Menu.buildFromTemplate([
+      ...(updateVersion
+        ? [{ label: tx.updateReady.replace('{v}', updateVersion), click: installUpdate }, { type: 'separator' }]
+        : []),
       { label: tx.open, click: showWindow },
       {
         label: isPlaying ? tx.pause : tx.play,
@@ -286,11 +291,54 @@ async function createWindow() {
   await win.loadURL(appUrl);
 }
 
+// ---------- Updates ----------
+// electron-updater downloads new versions in the background. We tell the window
+// (title-bar button) and the tray menu when one is ready, and install it on
+// request with a restart. Without a click it still installs when the app quits.
+let updateVersion = null;
+// `--simulate-update=9.9.9` fakes a downloaded update in dev (for testing the UI only).
+const SIMULATE_UPDATE = !app.isPackaged ? process.argv.find((a) => a.startsWith('--simulate-update='))?.split('=')[1] : undefined;
+
+function setUpdateReady(version) {
+  updateVersion = version;
+  if (win && !win.isDestroyed()) win.webContents.send('update-ready', version);
+  buildTrayMenu();
+}
+
+function installUpdate() {
+  if (!updateVersion) return;
+  if (!app.isPackaged) {
+    globalThis.__installRequested = true; // dev simulation: nothing to install
+    return;
+  }
+  isQuitting = true; // let the close handler step aside
+  try {
+    require('electron-updater').autoUpdater.quitAndInstall(true, true); // silent, then relaunch
+  } catch {
+    isQuitting = false;
+  }
+}
+
+ipcMain.handle('get-update', () => updateVersion);
+ipcMain.on('install-update', installUpdate);
+
+const UPDATE_CHECK_MS = 6 * 3600 * 1000; // the app can sit in the tray for days
+
 function checkForUpdates() {
+  if (SIMULATE_UPDATE) {
+    setTimeout(() => setUpdateReady(SIMULATE_UPDATE), 3000);
+    return;
+  }
   if (!app.isPackaged) return;
   try {
     const { autoUpdater } = require('electron-updater');
-    autoUpdater.checkForUpdatesAndNotify().catch(() => {});
+    autoUpdater.autoDownload = true;
+    autoUpdater.autoInstallOnAppQuit = true;
+    autoUpdater.on('update-downloaded', (info) => setUpdateReady(info.version));
+    autoUpdater.on('error', () => {});
+    const check = () => autoUpdater.checkForUpdates().catch(() => {});
+    check();
+    setInterval(check, UPDATE_CHECK_MS).unref?.();
   } catch {
     /* updater unavailable — skip */
   }

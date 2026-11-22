@@ -153,6 +153,11 @@ const en = {
   'notify.focus': 'Back to focus',
   'notify.focusBody': '{n} minutes.',
 
+  // App updates (Windows app)
+  'update.button': 'Update ready',
+  'update.title': 'Version {v} is downloaded. Click to restart and install it — sound stops for a few seconds.',
+  'update.toast': 'Update {v} is ready — click “Update ready” to restart and install it',
+
   // Cloud sync
   'sync.button': 'Sync',
   'sync.title': 'Sync your devices',
@@ -382,6 +387,10 @@ const th: Record<Key, string> = {
   'notify.breakBody': '{n} นาที ยืดเส้นยืดสาย หายใจลึกๆ พักสายตาจากจอ',
   'notify.focus': 'กลับมาโฟกัส',
   'notify.focusBody': '{n} นาที',
+
+  'update.button': 'อัปเดตพร้อมแล้ว',
+  'update.title': 'ดาวน์โหลดเวอร์ชัน {v} เสร็จแล้ว กดเพื่อรีสตาร์ทและติดตั้ง เสียงจะหยุดไปไม่กี่วินาที',
+  'update.toast': 'เวอร์ชัน {v} พร้อมแล้ว กด “อัปเดตพร้อมแล้ว” เพื่อรีสตาร์ทและติดตั้ง',
 
   'sync.button': 'ซิงก์',
   'sync.title': 'ซิงก์ข้ามเครื่อง',

@@ -44,7 +44,7 @@ You don't need an API key locally: the app calls the search API on the productio
 - Loads the app through a local server at `http://127.0.0.1:47821` instead of `file://`, because YouTube embeds won't play without a Referer.
 - The first time you close the window it asks: **Keep playing in tray** (sounds continue from the tray icon) or **Quit**. The answer is remembered (`closeAction` in `settings.json` in the app's userData folder). Change it from the tray menu's *Keep playing when the window is closed* checkbox. The tray menu also has Play/Pause, **Start with Windows** (starts hidden in the tray), and Quit.
 - **Ctrl+Alt+P** toggles play/pause from anywhere, even while the window is hidden. If another app already uses that shortcut, it's skipped silently.
-- Checks GitHub Releases on startup and installs updates automatically (`electron-updater`).
+- Checks GitHub Releases on startup and every 6 hours (the app can sit in the tray for days), and downloads new versions in the background (`electron-updater`). When one is ready, an **Update ready** button appears in the title bar and a *Restart to update* item at the top of the tray menu; clicking either restarts the app silently into the new version. Without a click it installs when the app quits. Test the UI without a real release with `npx electron . --simulate-update=9.9.9` (dev only; nothing gets installed).
 - The installer isn't code-signed, so Windows SmartScreen shows "Windows protected your PC" the first time: click **More info → Run anyway**.
 
 ## Checking the built-in videos

@@ -1,5 +1,6 @@
-import { AudioLines, Cloud, CloudAlert, CloudCheck, RefreshCw } from 'lucide-react';
+import { AudioLines, Cloud, CloudAlert, CloudCheck, Download, RefreshCw } from 'lucide-react';
 import { LANGS, useI18n } from '../i18n';
+import type { UpdateState } from '../state/useUpdate';
 import type { Sync } from '../state/useSync';
 import { syncErrorKey } from './SyncModal';
 
@@ -11,9 +12,10 @@ interface Props {
   extra?: string | null;
   sync: Sync;
   onOpenSync: () => void;
+  update: UpdateState;
 }
 
-export function TitleBar({ playing, count, extra, sync, onOpenSync }: Props) {
+export function TitleBar({ playing, count, extra, sync, onOpenSync, update }: Props) {
   const { t, lang, setLang } = useI18n();
   const SyncIcon =
     sync.status === 'syncing' ? RefreshCw : sync.status === 'error' ? CloudAlert : sync.status === 'ok' ? CloudCheck : Cloud;
@@ -30,6 +32,11 @@ export function TitleBar({ playing, count, extra, sync, onOpenSync }: Props) {
         Ambient Sound Mixer
       </div>
       <div className="titlebar-status">
+        {update.version && (
+          <button className="update-btn" onClick={update.install} title={t('update.title', { v: update.version })}>
+            <Download size={13} /> <span>{t('update.button')}</span>
+          </button>
+        )}
         {extra && <span className="titlebar-pill">{extra}</span>}
         <span className={`dot ${playing && count > 0 ? 'live' : ''}`} />
         <span className="status-text">

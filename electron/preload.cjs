@@ -13,6 +13,20 @@ contextBridge.exposeInMainWorld('ambient', {
   setPlaying(playing) {
     ipcRenderer.send('playing-changed', Boolean(playing));
   },
+  /** A new version finished downloading. Returns an unsubscribe function. */
+  onUpdateReady(callback) {
+    const listener = (_event, version) => callback(version);
+    ipcRenderer.on('update-ready', listener);
+    return () => ipcRenderer.removeListener('update-ready', listener);
+  },
+  /** Version of an already-downloaded update, or null. */
+  getUpdate() {
+    return ipcRenderer.invoke('get-update');
+  },
+  /** Restart and install the downloaded update. */
+  installUpdate() {
+    ipcRenderer.send('install-update');
+  },
   /** UI language ('th' | 'en') for the tray menu and close dialog. */
   setLanguage(lang) {
     ipcRenderer.send('language-changed', String(lang));

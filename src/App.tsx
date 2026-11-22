@@ -13,6 +13,7 @@ import { readSyncLink } from './lib/sync';
 import { useMixer } from './state/useMixer';
 import { useRoutines } from './state/useRoutines';
 import { useSync } from './state/useSync';
+import { useUpdate } from './state/useUpdate';
 
 export default function App() {
   const mixer = useMixer();
@@ -22,6 +23,7 @@ export default function App() {
   const { playing, setPlaying, active, loadShared } = mixer;
   const [toast, setToast] = useState<string | null>(null);
   const sync = useSync();
+  const update = useUpdate();
   const [syncOpen, setSyncOpen] = useState(false);
   const [syncLinkCode, setSyncLinkCode] = useState<string | null>(null);
   const routines = useRoutines(mixer, t);
@@ -51,6 +53,13 @@ export default function App() {
     return () => window.removeEventListener('hashchange', open);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadShared]);
+
+  // Tell the user once when a new version has finished downloading.
+  const updateVersion = update.version;
+  useEffect(() => {
+    if (updateVersion) setToast(t('update.toast', { v: updateVersion }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updateVersion]);
 
   useEffect(() => {
     if (!toast) return;
@@ -89,7 +98,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <TitleBar playing={playing} count={active.length} extra={focusLabel} sync={sync} onOpenSync={() => setSyncOpen(true)} />
+      <TitleBar playing={playing} count={active.length} extra={focusLabel} sync={sync} onOpenSync={() => setSyncOpen(true)} update={update} />
       <main className="layout">
         <MixerPanel
           mixer={mixer}
